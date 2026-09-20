@@ -86,6 +86,8 @@ if ckpt_path.exists() and ckpt_path.stat().st_size > 1000:
         print(f"Warning: Model state load error: {e}", flush=True)
 
 model.to(device).eval()
+for param in model.parameters():
+    param.requires_grad = False
 preprocessor = CTPreprocessor()
 roi_extractor = ROIPatchExtractor(patch_size=(128, 128))
 
@@ -166,6 +168,11 @@ async def predict_slice(file: UploadFile = File(...)):
     has_panc = bool(np.any(preds == 1))
     panc_pixels = int(np.sum(preds == 1))
     tumor_pixels = int(np.sum(preds == 2))
+
+    # Free temporary tensors and garbage collect
+    del t, logits, probs, cam_engine, cam_heatmap
+    import gc
+    gc.collect()
 
     return {
         "has_tumor": has_tumor,

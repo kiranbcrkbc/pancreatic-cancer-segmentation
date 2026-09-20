@@ -42,15 +42,26 @@ class GradCAMSeg:
             input_tensor: (1, 1, H, W) single CT slice tensor
             target_class: integer class ID (2 = tumor, 1 = pancreas)
         """
-        self.model.eval()
-        self.model.zero_grad()
+        # Temporarily freeze model parameters so backward() only tracks gradients for target_layer activations
+        # (prevents allocating 82MB of weight gradients in memory on resource-constrained containers)
+        prev_states = [p.requires_grad for p in self.model.parameters()]
+        for p in self.model.parameters():
+            p.requires_grad = False
 
-        input_tensor = input_tensor.requires_grad_(True)
+        self.model.eval()
+        self.model.zero_grad(set_to_none=True)
+
+        input_tensor = input_tensor.clone().detach().requires_grad_(True)
         logits = self.model(input_tensor)
 
         # Target score is the sum of logits for the target class across all spatial locations
         score = logits[0, target_class].sum()
         score.backward(retain_graph=False)
+
+        # Restore parameter grad states
+        for p, state in zip(self.model.parameters(), prev_states):
+            p.requires_grad = state
+
 
         if self.gradients is None or self.activations is None:
             h, w = input_tensor.shape[2], input_tensor.shape[3]
