@@ -47,12 +47,13 @@ class SpatialAttention(nn.Module):
 class CBAMBlock(nn.Module):
     """Residual Block with sequential Channel Attention and Spatial Attention."""
 
-    def __init__(self, in_channels: int, out_channels: int, ratio: int = 16) -> None:
+    def __init__(self, in_channels: int, out_channels: int, ratio: int = 16, dilation: int = 1) -> None:
         super().__init__()
-        self.conv1 = nn.Conv2d(in_channels, out_channels, 3, padding=1, bias=False)
+        padding = dilation
+        self.conv1 = nn.Conv2d(in_channels, out_channels, 3, padding=padding, dilation=dilation, bias=False)
         self.bn1 = nn.BatchNorm2d(out_channels)
         self.relu = nn.ReLU(inplace=True)
-        self.conv2 = nn.Conv2d(out_channels, out_channels, 3, padding=1, bias=False)
+        self.conv2 = nn.Conv2d(out_channels, out_channels, 3, padding=padding, dilation=dilation, bias=False)
         self.bn2 = nn.BatchNorm2d(out_channels)
 
         self.ca = ChannelAttention(out_channels, ratio)
@@ -75,8 +76,31 @@ class CBAMBlock(nn.Module):
         return self.relu(out + res)
 
 
+class MultiScaleCBAMBottleneck(nn.Module):
+    """Multi-Scale CBAM Bottleneck refining features across receptive fields."""
+
+    def __init__(self, channels: int, ratio: int = 16) -> None:
+        super().__init__()
+        half_c = max(1, channels // 2)
+        self.branch1 = CBAMBlock(channels, half_c, ratio=ratio, dilation=1)
+        self.branch2 = CBAMBlock(channels, half_c, ratio=ratio, dilation=2)
+        self.fuse = nn.Sequential(
+            nn.Conv2d(channels, channels, 1, bias=False),
+            nn.BatchNorm2d(channels),
+            nn.ReLU(inplace=True),
+            ChannelAttention(channels, ratio),
+            SpatialAttention(),
+        )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        b1 = self.branch1(x)
+        b2 = self.branch2(x)
+        fused = torch.cat([b1, b2], dim=1)
+        return x + self.fuse(fused)
+
+
 class CBAMNet(nn.Module):
-    """Comparative CNN + CBAM segmentation network."""
+    """Authoritative CNN + CBAM segmentation network with multi-scale CBAM bottleneck."""
 
     def __init__(
         self,
@@ -93,23 +117,32 @@ class CBAMNet(nn.Module):
         self.in_channels = in_channels
         self.num_classes = num_classes
 
+        # Encoder with integrated CBAM attention blocks
         self.enc1 = CBAMBlock(in_channels, c1)
         self.pool1 = nn.MaxPool2d(2, 2)
+
         self.enc2 = CBAMBlock(c1, c2)
         self.pool2 = nn.MaxPool2d(2, 2)
+
         self.enc3 = CBAMBlock(c2, c3)
         self.pool3 = nn.MaxPool2d(2, 2)
+
         self.enc4 = CBAMBlock(c3, c4)
         self.pool4 = nn.MaxPool2d(2, 2)
 
-        self.bottleneck = CBAMBlock(c4, c4)
+        # Multi-Scale CBAM Bottleneck
+        self.bottleneck = MultiScaleCBAMBottleneck(c4)
 
+        # Decoder with skip connections and CBAM refinement
         self.up4 = nn.ConvTranspose2d(c4, c3, 2, stride=2)
         self.dec4 = CBAMBlock(c3 + c4, c3)
+
         self.up3 = nn.ConvTranspose2d(c3, c2, 2, stride=2)
         self.dec3 = CBAMBlock(c2 + c3, c2)
+
         self.up2 = nn.ConvTranspose2d(c2, c1, 2, stride=2)
         self.dec2 = CBAMBlock(c1 + c2, c1)
+
         self.up1 = nn.ConvTranspose2d(c1, 32, 2, stride=2)
         self.dec1 = CBAMBlock(32 + c1, 32)
 

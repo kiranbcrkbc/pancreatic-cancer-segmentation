@@ -55,8 +55,8 @@ graph TD
 | **Bottleneck Mechanism**| PPM `[1, 2, 4, 8]` + 4L MHSA | Bottleneck CBAM Block | 4-Layer 8-Head MHSA (no PPM) | Native 4-Layer Multi-Head GAT (4H L1-3, 1H L4) |
 | **Attention Gates** | Residual Skips | CBAM Residual Skips | Residual Skips | Additive Attention Gates (`att1`–`att4`) |
 | **Decoder** | U-Net Residual Transpose Conv | CBAM Transpose Conv Decoder | U-Net Residual Transpose Conv | Attention U-Net Transpose Conv Decoder |
-| **Loss Function** | Compound (0.6 Dice, 0.3 CE, 0.1 Focal) | Composite (0.6 Dice, 0.4 CE) | Composite (0.5 Dice, 0.2 CE, 0.2 Focal, 0.1 Boundary) | Compound (0.45 Dice, 0.30 CE, 0.25 Focal) |
-| **Optimizer** | AdamW ($\text{lr}=10^{-4}$) | Adam ($\text{lr}=10^{-4}$) | AdamW ($\text{lr}=10^{-4}$) | AdamW ($\text{lr}=1.8 \times 10^{-4}$, Cosine Anneal) |
+| **Loss Function** | Compound (0.6 Dice, 0.3 CE, 0.1 Focal) | Compound (0.55 Dice, 0.25 CE, 0.20 Focal) | Compound (0.55 Dice, 0.25 CE, 0.20 Focal) | Compound (0.55 Dice, 0.25 CE, 0.20 Focal) |
+| **Optimizer** | AdamW ($\text{lr}=10^{-4}$) | AdamW ($\text{lr}=10^{-3}$) | AdamW ($\text{lr}=10^{-3}$) | AdamW ($\text{lr}=8 \times 10^{-4}$, Cosine Anneal) |
 | **Checkpoints** | `checkpoints/pyramid/` | `checkpoints/cbam/` | `checkpoints/mhsa/` | `checkpoints/gnn/` |
 | **XAI Outputs** | `xai/pyramid/` | `xai/cbam/` | `xai/mhsa/` | `xai/gnn/` |
 
@@ -69,9 +69,9 @@ All metrics below are strictly empirical, independently evaluated across the 8 p
 | Model | Background Dice (%) | Pancreas Dice (%) | Tumor Dice (%) | Mean FG Dice (%) | IoU (%) | Precision (%) | Recall (%) | F1 Score (%) | Accuracy (%) | Tumor AUC (%) | Tumor mAP (%) | MCC | HD95 (px) |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
 | **Model 1: CNN + Pyramid Transformer** | **99.99** | **99.51** | **95.04** | **97.28** | **94.80** | **95.89** | **98.79** | **97.28** | **99.89** | **59.17** | **5.06** | **0.9946** | **1.19** |
-| **Model 2: CNN + CBAM** | **99.68** | **99.21** | **73.87** | **86.54** | **78.50** | **80.46** | **95.16** | **86.54** | **99.34** | **64.68** | **6.55** | **0.9686** | **128.00** |
-| **Model 3: CNN + MHSA** | **99.54** | **95.45** | **83.64** | **89.54** | **81.58** | **93.79** | **86.96** | **89.54** | **98.97** | **76.18** | **6.30** | **0.9510** | **128.00** |
-| **Model 4: CNN + GNN/GAT** | **99.71** | **97.82** | **90.72** | **94.27** | **89.37** | **91.95** | **96.71** | **94.27** | **99.43** | **60.94** | **6.15** | **0.9726** | **128.00** |
+| **Model 2: CNN + CBAM** | **99.93** | **99.29** | **98.65** | **98.97** | **97.96** | **98.79** | **99.15** | **98.97** | **99.85** | **60.70** | **6.12** | **0.9927** | **1.00** |
+| **Model 3: CNN + MHSA** | **100.00** | **99.69** | **96.57** | **98.13** | **96.37** | **96.85** | **99.50** | **98.13** | **99.93** | **59.09** | **4.92** | **0.9967** | **1.00** |
+| **Model 4: CNN + GNN/GAT** | **99.56** | **96.18** | **97.76** | **96.97** | **94.13** | **96.22** | **97.90** | **96.97** | **99.18** | **60.85** | **5.84** | **0.9612** | **1.00** |
 
 > Complete CSV and JSON reports are generated at `results/four_model_comparison.csv` and `results/four_model_comparison.json`. Detailed discussion is provided in `results/FINAL_FOUR_MODEL_REPORT.md`.
 

@@ -146,7 +146,8 @@ class FoldTrainer:
         cat_targets = np.concatenate(all_targets, axis=0)
         cat_probs = np.concatenate(all_probs, axis=0)
 
-        metrics = compute_all_metrics(cat_preds, cat_targets, probs=cat_probs)
+        # In epoch validation, skip ROC-AUC / mAP calculation on 600k pixels for 10x speedup
+        metrics = compute_all_metrics(cat_preds, cat_targets, probs=None)
         avg_loss = total_loss / max(1, batches)
         return avg_loss, metrics
 
@@ -171,9 +172,24 @@ class FoldTrainer:
         best_checkpoint_path = self.checkpoint_dir / f"fold{self.fold_idx}_best.pt"
         last_checkpoint_path = self.checkpoint_dir / f"fold{self.fold_idx}_last.pt"
 
+        start_epoch = 1
+        if last_checkpoint_path.exists():
+            try:
+                ckpt = torch.load(last_checkpoint_path, map_location=self.device)
+                if ckpt.get("fold") == self.fold_idx and len(ckpt.get("history", {}).get("epoch", [])) > 0:
+                    self.model.load_state_dict(ckpt["model_state_dict"])
+                    if "optimizer_state_dict" in ckpt:
+                        self.optimizer.load_state_dict(ckpt["optimizer_state_dict"])
+                    self.best_metric = float(ckpt.get("best_metric", -1.0))
+                    self.history = ckpt.get("history", self.history)
+                    start_epoch = len(self.history["epoch"]) + 1
+                    self.logger.info(f"Resuming Fold {self.fold_idx} from epoch {start_epoch} (best metric: {self.best_metric:.4f})...")
+            except Exception as e:
+                self.logger.warning(f"Could not resume from {last_checkpoint_path}: {e}")
+
         self.logger.info(f"--- Starting Training Fold {self.fold_idx} ({len(train_loader.dataset)} train, {len(val_loader.dataset)} val) ---")
 
-        for epoch in range(1, self.max_epochs + 1):
+        for epoch in range(start_epoch, self.max_epochs + 1):
             t0 = time.time()
             tr_loss = self.train_one_epoch(train_loader)
             val_loss, val_metrics = self.evaluate(val_loader)
@@ -201,12 +217,15 @@ class FoldTrainer:
                 f"Acc: {acc:.4f} | Time: {duration:.1f}s"
             )
 
+            # Checkpoint tracking prioritizing tumor localization
+            checkpoint_score = (0.80 * t_dice + 0.20 * p_dice) if t_dice > 0 else (0.20 * p_dice)
+
             # Check if best model
-            if mean_dice > self.best_metric + self.min_delta:
-                self.best_metric = mean_dice
+            if checkpoint_score > self.best_metric + self.min_delta:
+                self.best_metric = checkpoint_score
                 self.patience_counter = 0
                 self.save_checkpoint(best_checkpoint_path, is_best=True)
-                self.logger.info(f"==> Fold {self.fold_idx} Saved new BEST checkpoint (MeanDice: {mean_dice:.4f})")
+                self.logger.info(f"==> Fold {self.fold_idx} Saved new BEST checkpoint (Score: {checkpoint_score:.4f}, T-Dice: {t_dice:.4f}, P-Dice: {p_dice:.4f})")
             else:
                 self.patience_counter += 1
 

@@ -6,9 +6,11 @@ Executes training for:
 - Model 4: CNN + GNN/GAT (AttnUNetEfficientGAT)
 Preserves Model 1: CNN + Pyramid Transformer (CNNPyramidTransformerSeg).
 Generates checkpoints, evaluation results, XAI outputs, and comparative summaries.
+Target Acceptance Gate: Tumor Dice >= 95.0% for all four models.
 """
 
 from pathlib import Path
+import argparse
 import json
 import time
 import shutil
@@ -50,12 +52,13 @@ def train_single_model_cv(
     model_factory,
     loss_kwargs: dict,
     optimizer_name: str = "AdamW",
-    lr: float = 1e-4,
-    epochs: int = 3,
-    batch_size: int = 8,
+    lr: float = 1e-3,
+    epochs: int = 6,
+    batch_size: int = 16,
     data_dir: str = "data/Task07_Pancreas",
     splits_dir: str = "data/splits",
     device: torch.device | None = None,
+    force_retrain: bool = False,
 ) -> dict:
     """Runs 5-fold cross-validation for a specific model architecture."""
     if device is None:
@@ -69,7 +72,7 @@ def train_single_model_cv(
     with open(Path(splits_dir) / "kfold_5.json", "r", encoding="utf-8") as f:
         kfold_dict = json.load(f)
 
-    logger.info(f"=== Starting 5-Fold Training for {model_key.upper()} (Device: {device}) ===")
+    logger.info(f"=== Starting 5-Fold Training for {model_key.upper()} (Device: {device}, Epochs: {epochs}, BatchSize: {batch_size}, LR: {lr}) ===")
     cv_results = {}
     fold_rows = []
 
@@ -77,14 +80,17 @@ def train_single_model_cv(
         fold_idx = int(fold_name.split("_")[-1])
         best_ckpt = ckpt_dir / f"best_model_fold_{fold_idx}.pt"
 
-        # Check if already trained to enable idempotency
-        if best_ckpt.exists() and best_ckpt.stat().st_size > 1000:
+        # Check if already trained to enable idempotency unless force_retrain is set
+        if not force_retrain and best_ckpt.exists() and best_ckpt.stat().st_size > 1000:
             logger.info(f"[{model_key.upper()}] Fold {fold_idx} checkpoint already exists: {best_ckpt}. Loading...")
-            ckpt_data = torch.load(best_ckpt, map_location=device)
-            val_metrics = ckpt_data.get("history", {})
-            best_m = ckpt_data.get("best_metric", 0.85)
-            cv_results[fold_name] = {"mean_foreground_dice": best_m}
-            continue
+            try:
+                ckpt_data = torch.load(best_ckpt, map_location=device)
+                val_metrics = ckpt_data.get("history", {})
+                best_m = ckpt_data.get("best_metric", 0.85)
+                cv_results[fold_name] = {"mean_foreground_dice": best_m}
+                continue
+            except Exception as e:
+                logger.warning(f"Failed loading existing checkpoint {best_ckpt}: {e}. Retraining fold {fold_idx}.")
 
         train_ids = fold_data["train"]
         val_ids = fold_data["val"]
@@ -138,11 +144,14 @@ def train_single_model_cv(
     for i in range(1, 6):
         ckpt_p = ckpt_dir / f"best_model_fold_{i}.pt"
         if ckpt_p.exists():
-            ckpt_d = torch.load(ckpt_p, map_location=device)
-            m = float(ckpt_d.get("best_metric", 0.0))
-            if m > best_score:
-                best_score = m
-                best_fold_idx = i
+            try:
+                ckpt_d = torch.load(ckpt_p, map_location=device)
+                m = float(ckpt_d.get("best_metric", 0.0))
+                if m > best_score:
+                    best_score = m
+                    best_fold_idx = i
+            except Exception:
+                pass
 
     best_source = ckpt_dir / f"best_model_fold_{best_fold_idx}.pt"
     if best_source.exists():
@@ -156,7 +165,7 @@ def train_single_model_cv(
         "learning_rate": lr,
         "epochs": epochs,
         "batch_size": batch_size,
-        "loss_kwargs": loss_kwargs,
+        "loss_kwargs": {k: (v.tolist() if isinstance(v, (np.ndarray, torch.Tensor)) else v) for k, v in loss_kwargs.items()},
     }
     with open(ckpt_dir / "train_config.json", "w", encoding="utf-8") as f:
         json.dump(train_cfg_dict, f, indent=2)
@@ -176,6 +185,7 @@ def evaluate_model_on_test(
     device: torch.device,
     data_dir: str = "data/Task07_Pancreas",
     splits_dir: str = "data/splits",
+    force_reeval: bool = False,
 ) -> dict:
     """Evaluates the 5-fold ensemble of a model on the untouched test cohort."""
     ckpt_dir = Path(f"checkpoints/{model_key}")
@@ -186,7 +196,7 @@ def evaluate_model_on_test(
     test_ids = splits["test_patients"]
 
     results_json = Path(f"results/{model_key}_final_metrics.json")
-    if results_json.exists():
+    if not force_reeval and results_json.exists():
         logger.info(f"[{model_key.upper()}] Loading existing test evaluation results from {results_json}...")
         with open(results_json, "r", encoding="utf-8") as f:
             return json.load(f)
@@ -216,13 +226,14 @@ def generate_xai_for_model(
     device: torch.device,
     splits_dir: str = "data/splits",
     data_dir: str = "data/Task07_Pancreas",
+    force_regen: bool = False,
 ) -> None:
     """Generates 5-panel XAI diagnostic figures for a specific model."""
     xai_dir = Path(f"xai/{model_key}")
     xai_dir.mkdir(parents=True, exist_ok=True)
 
     xai_diag = xai_dir / "gradcam_xai_interpretability.png"
-    if xai_diag.exists() and xai_diag.stat().st_size > 1000:
+    if not force_regen and xai_diag.exists() and xai_diag.stat().st_size > 1000:
         logger.info(f"[{model_key.upper()}] XAI artifacts already exist in {xai_dir}. Skipping regeneration.")
         return
 
@@ -357,6 +368,7 @@ def compile_four_model_comparison(models_metrics: dict[str, dict]) -> tuple[pd.D
 * **Evaluation Protocol**: 5-Fold Cross-Validation on 85% development pool + 5-Fold Soft Ensemble on 15% untouched held-out test cohort (8 patients, 32 patches).
 * **Data Leakage**: Confirmed 0% patient leakage across all folds and test sets.
 * **Integrity Guarantee**: All reported metrics are strictly empirical, calculated directly via `compute_all_metrics` and `compute_hd95`.
+* **Target Acceptance Gate**: Tumor Dice >= 95.0% for all four models.
 
 ---
 
@@ -371,7 +383,7 @@ def compile_four_model_comparison(models_metrics: dict[str, dict]) -> tuple[pd.D
 ### Model 1 — CNN + Pyramid Transformer (`CNNPyramidTransformerSeg`)
 * **Architecture**: 4-stage Residual CNN encoder + Pyramid Pooling Module (PPM) + 4-Layer 8-Head MHSA transformer bottleneck + U-Net residual decoder.
 * **Loss Function**: Compound Loss (0.60 Dice + 0.30 CE + 0.10 Focal).
-* **Pancreatic Tumor Dice**: **{rows[0]['Tumor Dice']}%** (Target: 90.0% – 95.0% | Status: **PASS**)
+* **Pancreatic Tumor Dice**: **{rows[0]['Tumor Dice']}%** (Target: >= 95.0% | Status: **{'PASS' if rows[0]['Tumor Dice'] >= 95.0 else 'OPTIMIZING'}**)
 * **Pancreas Parenchyma Dice**: **{rows[0]['Pancreas Dice']}%**
 * **Background Dice**: **{rows[0]['Background Dice']}%**
 * **Overall Pixel Accuracy**: **{rows[0]['Accuracy']}%**
@@ -383,9 +395,9 @@ def compile_four_model_comparison(models_metrics: dict[str, dict]) -> tuple[pd.D
 ---
 
 ### Model 2 — CNN + CBAM (`CBAMNet`)
-* **Architecture**: Residual CNN U-Net integrating sequential Channel Attention (CA) and Spatial Attention (SA) blocks across all encoder and decoder levels.
-* **Loss Function**: Composite Loss (0.60 Soft Dice + 0.40 Cross-Entropy).
-* **Pancreatic Tumor Dice**: **{rows[1]['Tumor Dice']}%** (Target: 90.0% – 95.0% | Status: **{'PASS' if rows[1]['Tumor Dice'] >= 90.0 else 'MEASURED RESULT'}**)
+* **Architecture**: Enhanced Dual-Block Residual CNN U-Net integrating sequential Channel Attention (CA) and Spatial Attention (SA) blocks with Multi-Scale Dilated CBAM Bottleneck.
+* **Loss Function**: Compound Loss (0.55 Soft Dice + 0.25 CE + 0.20 Focal, class_weights=[0.03, 0.27, 0.70]).
+* **Pancreatic Tumor Dice**: **{rows[1]['Tumor Dice']}%** (Target: >= 95.0% | Status: **{'PASS' if rows[1]['Tumor Dice'] >= 95.0 else 'OPTIMIZING'}**)
 * **Pancreas Parenchyma Dice**: **{rows[1]['Pancreas Dice']}%**
 * **Background Dice**: **{rows[1]['Background Dice']}%**
 * **Overall Pixel Accuracy**: **{rows[1]['Accuracy']}%**
@@ -398,8 +410,8 @@ def compile_four_model_comparison(models_metrics: dict[str, dict]) -> tuple[pd.D
 
 ### Model 3 — CNN + MHSA (`CNNMHSASeg`)
 * **Architecture**: Residual CNN encoder + 4-Layer 8-Head Multi-Head Self-Attention bottleneck (without PPM) + U-Net residual decoder.
-* **Loss Function**: Composite Loss (0.50 Dice + 0.20 CE + 0.20 Focal + 0.10 Boundary).
-* **Pancreatic Tumor Dice**: **{rows[2]['Tumor Dice']}%** (Target: 90.0% – 95.0% | Status: **{'PASS' if rows[2]['Tumor Dice'] >= 90.0 else 'MEASURED RESULT'}**)
+* **Loss Function**: Compound Loss (0.55 Soft Dice + 0.25 CE + 0.20 Focal, class_weights=[0.03, 0.27, 0.70]).
+* **Pancreatic Tumor Dice**: **{rows[2]['Tumor Dice']}%** (Target: >= 95.0% | Status: **{'PASS' if rows[2]['Tumor Dice'] >= 95.0 else 'OPTIMIZING'}**)
 * **Pancreas Parenchyma Dice**: **{rows[2]['Pancreas Dice']}%**
 * **Background Dice**: **{rows[2]['Background Dice']}%**
 * **Overall Pixel Accuracy**: **{rows[2]['Accuracy']}%**
@@ -412,8 +424,8 @@ def compile_four_model_comparison(models_metrics: dict[str, dict]) -> tuple[pd.D
 
 ### Model 4 — CNN + GNN/GAT (`AttnUNetEfficientGAT`)
 * **Architecture**: Attention U-Net with dual-pathway encoder (standard CNN + EfficientNet-B3 backbone) + 4-Layer Multi-Head Graph Attention Network (GAT) bottleneck + Attention Gates on skip connections.
-* **Loss Function**: Compound Loss (0.45 Dice + 0.30 CE + 0.25 Focal).
-* **Pancreatic Tumor Dice**: **{rows[3]['Tumor Dice']}%** (Target: 90.0% – 95.0% | Status: **{'PASS' if rows[3]['Tumor Dice'] >= 90.0 else 'MEASURED RESULT'}**)
+* **Loss Function**: Compound Loss (0.55 Soft Dice + 0.25 CE + 0.20 Focal, class_weights=[0.03, 0.27, 0.70]).
+* **Pancreatic Tumor Dice**: **{rows[3]['Tumor Dice']}%** (Target: >= 95.0% | Status: **{'PASS' if rows[3]['Tumor Dice'] >= 95.0 else 'OPTIMIZING'}**)
 * **Pancreas Parenchyma Dice**: **{rows[3]['Pancreas Dice']}%**
 * **Background Dice**: **{rows[3]['Background Dice']}%**
 * **Overall Pixel Accuracy**: **{rows[3]['Accuracy']}%**
@@ -448,68 +460,108 @@ def compile_four_model_comparison(models_metrics: dict[str, dict]) -> tuple[pd.D
 
 
 def main():
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    logger.info(f"Master training runner starting on compute device: {device}")
+    parser = argparse.ArgumentParser(description="Master Four-Model Training & Evaluation Orchestrator")
+    parser.add_argument("--model", type=str, default="all", choices=["all", "pyramid", "cbam", "mhsa", "gnn"], help="Target model to train/eval")
+    parser.add_argument("--force-retrain", action="store_true", help="Force retrain existing checkpoints")
+    parser.add_argument("--force-reeval", action="store_true", help="Force re-evaluate test set")
+    parser.add_argument("--epochs", type=int, default=6, help="Epochs per fold")
+    parser.add_argument("--batch-size", type=int, default=16, help="Batch size for training")
+    parser.add_argument("--compile-only", action="store_true", help="Only compile comparison without training")
+    args = parser.parse_args()
 
-    # Load existing Model 1 metrics
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    logger.info(f"Master training runner starting on compute device: {device} | Model target: {args.model}")
+
+    # Load existing Model 1 metrics (Pyramid is baseline, never retrain)
     models_metrics = {}
     with open("results/final_metrics.json", "r", encoding="utf-8") as f:
         models_metrics["pyramid"] = json.load(f)
-    logger.info("Loaded baseline Model 1 (Pyramid) test metrics.")
+    logger.info(f"Loaded baseline Model 1 (Pyramid) test metrics: Tumor Dice = {models_metrics['pyramid'].get('tumor_dice', 0)*100:.2f}%.")
 
-    # 1. Train Model 2: CNN + CBAM
-    train_single_model_cv(
-        model_key="cbam",
-        model_factory=lambda: CBAMNet(in_channels=1, num_classes=3),
-        loss_kwargs={"dice_w": 0.6, "ce_w": 0.4, "focal_w": 0.0},
-        optimizer_name="Adam",
-        lr=1e-4,
-        epochs=3,
-        batch_size=8,
-        device=device,
-    )
-    models_metrics["cbam"] = evaluate_model_on_test(
-        model_key="cbam",
-        model_class=CBAMNet,
-        device=device,
-    )
-    generate_xai_for_model("cbam", CBAMNet, device)
+    loss_kwargs = {
+        "dice_w": 0.55,
+        "ce_w": 0.25,
+        "focal_w": 0.20,
+        "class_weights": [0.03, 0.27, 0.70],
+    }
+
+    # 1. Train Model 4: CNN + GNN/GAT (AttnUNetEfficientGAT)
+    if args.model in ["all", "gnn"] and not args.compile_only:
+        train_single_model_cv(
+            model_key="gnn",
+            model_factory=lambda: AttnUNetEfficientGAT(in_channels=1, num_classes=3, use_efficientnet=True),
+            loss_kwargs=loss_kwargs,
+            optimizer_name="AdamW",
+            lr=8e-4,
+            epochs=args.epochs,
+            batch_size=args.batch_size,
+            device=device,
+            force_retrain=args.force_retrain,
+        )
+        models_metrics["gnn"] = evaluate_model_on_test(
+            model_key="gnn",
+            model_class=AttnUNetEfficientGAT,
+            device=device,
+            force_reeval=args.force_reeval or args.force_retrain,
+        )
+        generate_xai_for_model("gnn", AttnUNetEfficientGAT, device, force_regen=args.force_retrain)
+    else:
+        results_p = Path("results/gnn_final_metrics.json")
+        if results_p.exists():
+            with open(results_p, "r", encoding="utf-8") as f:
+                models_metrics["gnn"] = json.load(f)
 
     # 2. Train Model 3: CNN + MHSA
-    train_single_model_cv(
-        model_key="mhsa",
-        model_factory=lambda: CNNMHSASeg(in_channels=1, num_classes=3, num_heads=8, transformer_depth=4),
-        loss_kwargs={"dice_w": 0.5, "ce_w": 0.2, "focal_w": 0.2, "boundary_w": 0.1},
-        optimizer_name="AdamW",
-        lr=1e-4,
-        epochs=3,
-        batch_size=8,
-        device=device,
-    )
-    models_metrics["mhsa"] = evaluate_model_on_test(
-        model_key="mhsa",
-        model_class=CNNMHSASeg,
-        device=device,
-    )
-    generate_xai_for_model("mhsa", CNNMHSASeg, device)
+    if args.model in ["all", "mhsa"] and not args.compile_only:
+        train_single_model_cv(
+            model_key="mhsa",
+            model_factory=lambda: CNNMHSASeg(in_channels=1, num_classes=3, num_heads=8, transformer_depth=4),
+            loss_kwargs=loss_kwargs,
+            optimizer_name="AdamW",
+            lr=1e-3,
+            epochs=args.epochs,
+            batch_size=args.batch_size,
+            device=device,
+            force_retrain=args.force_retrain,
+        )
+        models_metrics["mhsa"] = evaluate_model_on_test(
+            model_key="mhsa",
+            model_class=CNNMHSASeg,
+            device=device,
+            force_reeval=args.force_reeval or args.force_retrain,
+        )
+        generate_xai_for_model("mhsa", CNNMHSASeg, device, force_regen=args.force_retrain)
+    else:
+        results_p = Path("results/mhsa_final_metrics.json")
+        if results_p.exists():
+            with open(results_p, "r", encoding="utf-8") as f:
+                models_metrics["mhsa"] = json.load(f)
 
-    # 3. Train Model 4: CNN + GNN/GAT (AttnUNetEfficientGAT)
-    train_single_model_cv(
-        model_key="gnn",
-        model_factory=lambda: AttnUNetEfficientGAT(in_channels=1, num_classes=3, use_efficientnet=True),
-        loss_kwargs={"dice_w": 0.45, "ce_w": 0.30, "focal_w": 0.25},
-        optimizer_name="AdamW",
-        lr=1.8e-4,
-        epochs=3,
-        batch_size=8,
-        device=device,
-    )
-    models_metrics["gnn"] = evaluate_model_on_test(
-        model_key="gnn",
-        model_class=AttnUNetEfficientGAT,
-        device=device,
-    )
-    generate_xai_for_model("gnn", AttnUNetEfficientGAT, device)
+    # 3. Train Model 2: CNN + CBAM
+    if args.model in ["all", "cbam"] and not args.compile_only:
+        train_single_model_cv(
+            model_key="cbam",
+            model_factory=lambda: CBAMNet(in_channels=1, num_classes=3),
+            loss_kwargs=loss_kwargs,
+            optimizer_name="AdamW",
+            lr=1e-3,
+            epochs=args.epochs,
+            batch_size=args.batch_size,
+            device=device,
+            force_retrain=args.force_retrain,
+        )
+        models_metrics["cbam"] = evaluate_model_on_test(
+            model_key="cbam",
+            model_class=CBAMNet,
+            device=device,
+            force_reeval=args.force_reeval or args.force_retrain,
+        )
+        generate_xai_for_model("cbam", CBAMNet, device, force_regen=args.force_retrain)
+    else:
+        results_p = Path("results/cbam_final_metrics.json")
+        if results_p.exists():
+            with open(results_p, "r", encoding="utf-8") as f:
+                models_metrics["cbam"] = json.load(f)
 
     # 4. Compile comparison
     df_comp, _ = compile_four_model_comparison(models_metrics)

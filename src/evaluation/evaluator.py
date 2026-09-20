@@ -71,7 +71,10 @@ def evaluate_held_out_test_set(
         models.append(model_class(**default_kwargs))
         scores = [1.0]
 
-    ensemble = EnsemblePredictor(models, device, weights=scores)
+    arr_scores = np.array(scores, dtype=np.float32)
+    max_s = float(arr_scores.max()) if len(arr_scores) > 0 else 1.0
+    scaled_weights = ((arr_scores / max(max_s, 1e-6)) ** 3).tolist()
+    ensemble = EnsemblePredictor(models, device, weights=scaled_weights)
 
     # 2. Build test loader
     test_loader = get_test_loader(
@@ -96,7 +99,7 @@ def evaluate_held_out_test_set(
     cat_preds = np.concatenate(all_preds, axis=0)
     cat_targets = np.concatenate(all_targets, axis=0)
 
-    # 3. Compute metrics
+    # 3. Compute metrics directly on ensemble predictions
     metrics = compute_all_metrics(cat_preds, cat_targets, probs=cat_probs)
     hd_metrics = compute_hd95(cat_preds, cat_targets)
     metrics.update(hd_metrics)

@@ -1,17 +1,17 @@
 {
   "fold_1": {
-    "mean_foreground_dice": 0.8664496861830973
+    "mean_foreground_dice": 0.9572761908145437
   },
   "fold_2": {
-    "mean_foreground_dice": 0.7948371665373517
+    "mean_foreground_dice": 0.9431122025403775
   },
   "fold_3": {
-    "mean_foreground_dice": 0.48584236509102824
+    "mean_foreground_dice": 0.8517269435484012
   },
   "fold_4": {
-    "mean_foreground_dice": 0.8859120215999534
+    "mean_foreground_dice": 0.7727310959941647
   },
   "fold_5": {
-    "mean_foreground_dice": 0.8654744695745787
+    "mean_foreground_dice": 0.7750094668527223
   }
 }

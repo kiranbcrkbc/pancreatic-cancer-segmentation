@@ -1,12 +1,17 @@
 {
   "model_key": "cbam",
-  "optimizer": "Adam",
-  "learning_rate": 0.0001,
-  "epochs": 3,
-  "batch_size": 8,
+  "optimizer": "AdamW",
+  "learning_rate": 0.001,
+  "epochs": 6,
+  "batch_size": 16,
   "loss_kwargs": {
-    "dice_w": 0.6,
-    "ce_w": 0.4,
-    "focal_w": 0.0
+    "dice_w": 0.55,
+    "ce_w": 0.25,
+    "focal_w": 0.2,
+    "class_weights": [
+      0.03,
+      0.27,
+      0.7
+    ]
   }
 }
