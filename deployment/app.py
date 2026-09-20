@@ -48,6 +48,7 @@ def get_script():
 
 # Device and Model initialization
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+torch.set_num_threads(1)
 model = CNNPyramidTransformerSeg(in_channels=1, num_classes=3)
 
 def ensure_model_checkpoint() -> Path:
@@ -58,15 +59,15 @@ def ensure_model_checkpoint() -> Path:
     if fold1.exists() and fold1.stat().st_size > 1000:
         return fold1
     release_url = "https://github.com/kiranbcrkbc/pancreatic-cancer-segmentation/releases/download/v1.0.0/final_model.pt"
-    print(f"Fetching production checkpoint from {release_url}...")
+    print(f"Fetching production checkpoint from {release_url}...", flush=True)
     target_path.parent.mkdir(parents=True, exist_ok=True)
     try:
         import urllib.request
         urllib.request.urlretrieve(release_url, str(target_path))
-        print("Model checkpoint fetched successfully.")
+        print("Model checkpoint fetched successfully.", flush=True)
         return target_path
     except Exception as e:
-        print(f"Warning: could not download model weights: {e}")
+        print(f"Warning: could not download model weights: {e}", flush=True)
         return target_path
 
 ckpt_path = ensure_model_checkpoint()
@@ -75,8 +76,12 @@ if ckpt_path.exists() and ckpt_path.stat().st_size > 1000:
         data = torch.load(ckpt_path, map_location=device)
         state_dict = data.get("model_state_dict", data)
         model.load_state_dict(state_dict)
+        del data, state_dict
+        import gc
+        gc.collect()
+        print("Production model weights successfully loaded into CNNPyramidTransformerSeg.", flush=True)
     except Exception as e:
-        print(f"Warning: Model state load error: {e}")
+        print(f"Warning: Model state load error: {e}", flush=True)
 
 model.to(device).eval()
 preprocessor = CTPreprocessor()
