@@ -35,7 +35,12 @@ data/Task07_Pancreas/
 checkpoints/*.pt
 checkpoints/*.pth
 checkpoints/*.pt.tmp
-!checkpoints/.gitkeep
+checkpoints/**/*.pt
+checkpoints/**/*.pth
+checkpoints/**/*.pt.tmp
+!checkpoints/**/.gitkeep
+!checkpoints/**/train_config.json
+!checkpoints/**/eval_results.json
 
 # Logs & Temporary Files
 logs/*.log

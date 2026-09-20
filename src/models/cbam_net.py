@@ -78,29 +78,47 @@ class CBAMBlock(nn.Module):
 class CBAMNet(nn.Module):
     """Comparative CNN + CBAM segmentation network."""
 
-    def __init__(self, in_channels: int = 1, num_classes: int = 3) -> None:
+    def __init__(
+        self,
+        in_channels: int = 1,
+        num_classes: int = 3,
+        encoder_channels: list[int] | None = None,
+        dropout: float = 0.1,
+    ) -> None:
         super().__init__()
-        self.enc1 = CBAMBlock(in_channels, 64)
+        if encoder_channels is None:
+            encoder_channels = [64, 128, 256, 512]
+        c1, c2, c3, c4 = encoder_channels
+
+        self.in_channels = in_channels
+        self.num_classes = num_classes
+
+        self.enc1 = CBAMBlock(in_channels, c1)
         self.pool1 = nn.MaxPool2d(2, 2)
-        self.enc2 = CBAMBlock(64, 128)
+        self.enc2 = CBAMBlock(c1, c2)
         self.pool2 = nn.MaxPool2d(2, 2)
-        self.enc3 = CBAMBlock(128, 256)
+        self.enc3 = CBAMBlock(c2, c3)
         self.pool3 = nn.MaxPool2d(2, 2)
-        self.enc4 = CBAMBlock(256, 512)
+        self.enc4 = CBAMBlock(c3, c4)
         self.pool4 = nn.MaxPool2d(2, 2)
 
-        self.bottleneck = CBAMBlock(512, 512)
+        self.bottleneck = CBAMBlock(c4, c4)
 
-        self.up4 = nn.ConvTranspose2d(512, 256, 2, stride=2)
-        self.dec4 = CBAMBlock(256 + 512, 256)
-        self.up3 = nn.ConvTranspose2d(256, 128, 2, stride=2)
-        self.dec3 = CBAMBlock(128 + 256, 128)
-        self.up2 = nn.ConvTranspose2d(128, 64, 2, stride=2)
-        self.dec2 = CBAMBlock(64 + 128, 64)
-        self.up1 = nn.ConvTranspose2d(64, 32, 2, stride=2)
-        self.dec1 = CBAMBlock(32 + 64, 32)
+        self.up4 = nn.ConvTranspose2d(c4, c3, 2, stride=2)
+        self.dec4 = CBAMBlock(c3 + c4, c3)
+        self.up3 = nn.ConvTranspose2d(c3, c2, 2, stride=2)
+        self.dec3 = CBAMBlock(c2 + c3, c2)
+        self.up2 = nn.ConvTranspose2d(c2, c1, 2, stride=2)
+        self.dec2 = CBAMBlock(c1 + c2, c1)
+        self.up1 = nn.ConvTranspose2d(c1, 32, 2, stride=2)
+        self.dec1 = CBAMBlock(32 + c1, 32)
 
+        self.dropout = nn.Dropout2d(dropout) if dropout > 0 else nn.Identity()
         self.final_head = nn.Conv2d(32, num_classes, 1)
+
+    def get_cam_target_layer(self) -> nn.Module:
+        """Returns target convolutional layer for Grad-CAM interpretability."""
+        return self.enc4.conv2
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         e1 = self.enc1(x)
@@ -108,7 +126,7 @@ class CBAMNet(nn.Module):
         e3 = self.enc3(self.pool2(e2))
         e4 = self.enc4(self.pool3(e3))
 
-        b = self.bottleneck(self.pool4(e4))
+        b = self.dropout(self.bottleneck(self.pool4(e4)))
 
         d4 = self.dec4(torch.cat([self.up4(b), e4], dim=1))
         d3 = self.dec3(torch.cat([self.up3(d4), e3], dim=1))
@@ -116,3 +134,4 @@ class CBAMNet(nn.Module):
         d1 = self.dec1(torch.cat([self.up1(d2), e1], dim=1))
 
         return self.final_head(d1)
+

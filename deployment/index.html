@@ -64,6 +64,17 @@
                     </div>
                 </div>
 
+                <!-- Model Selector Dropdown -->
+                <div class="model-selection-group" style="margin: 1rem 0; padding: 0.75rem; background: rgba(15, 23, 42, 0.6); border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.1);">
+                    <label for="model-select" style="display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 0.35rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em;">Select Architecture:</label>
+                    <select id="model-select" class="form-select" style="width: 100%; padding: 0.6rem 0.8rem; border-radius: 6px; background: #1e293b; color: #f8fafc; border: 1px solid rgba(255, 255, 255, 0.2); font-size: 0.85rem; cursor: pointer; outline: none;">
+                        <option value="pyramid" selected>Model 1: CNN + Pyramid Transformer (PPM + MHSA)</option>
+                        <option value="cbam">Model 2: CNN + CBAM (Channel & Spatial Attention)</option>
+                        <option value="mhsa">Model 3: CNN + MHSA (Residual CNN + 4L MHSA)</option>
+                        <option value="gnn">Model 4: CNN + GNN/GAT (EfficientNet-B3 + 4L GAT)</option>
+                    </select>
+                </div>
+
                 <button class="btn btn-primary btn-block" id="btn-analyze" disabled>
                     <span id="btn-text">Run Diagnostic Segmentation</span>
                     <span class="spinner" id="btn-spinner" style="display: none;"></span>

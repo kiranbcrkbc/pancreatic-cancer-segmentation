@@ -1,0 +1,17 @@
+{
+  "fold_1": {
+    "mean_foreground_dice": 0.648281639048547
+  },
+  "fold_2": {
+    "mean_foreground_dice": 0.5144166750818401
+  },
+  "fold_3": {
+    "mean_foreground_dice": 0.8966363825839827
+  },
+  "fold_4": {
+    "mean_foreground_dice": 0.6765423136272868
+  },
+  "fold_5": {
+    "mean_foreground_dice": 0.8439871811734344
+  }
+}

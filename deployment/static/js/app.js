@@ -42,6 +42,59 @@ document.addEventListener("DOMContentLoaded", () => {
             backendStatus.classList.add("badge-dark");
         });
 
+    // Dynamic Architecture Specs Mapping & Query Parameter Routing
+    const modelSelect = document.getElementById("model-select");
+    const specsList = document.querySelector(".specs-list");
+    const modelSpecs = {
+        pyramid: [
+            "<strong>Encoder:</strong> 4-Stage Residual CNN (64-512)",
+            "<strong>Bottleneck:</strong> Pyramid Pooling Module (PPM) + Multi-Head Self-Attention",
+            "<strong>Decoder:</strong> Residual U-Net Skip Decoder",
+            "<strong>Target Classes:</strong> Background (0), Pancreas (1), Tumor (2)",
+            "<strong>Interpretability:</strong> Grad-CAM & Attention Maps"
+        ],
+        cbam: [
+            "<strong>Encoder:</strong> 4-Stage Residual CNN + Channel & Spatial Attention (CBAM)",
+            "<strong>Bottleneck:</strong> High-Capacity CBAM Feature Refinement Block",
+            "<strong>Decoder:</strong> CBAM-Enhanced Residual U-Net Decoder",
+            "<strong>Target Classes:</strong> Background (0), Pancreas (1), Tumor (2)",
+            "<strong>Interpretability:</strong> Grad-CAM on Enc4 Residual Conv"
+        ],
+        mhsa: [
+            "<strong>Encoder:</strong> 4-Stage Residual CNN Encoder (64-512)",
+            "<strong>Bottleneck:</strong> 4-Layer 8-Head Multi-Head Self-Attention (MHSA)",
+            "<strong>Decoder:</strong> Residual U-Net Skip Decoder",
+            "<strong>Target Classes:</strong> Background (0), Pancreas (1), Tumor (2)",
+            "<strong>Interpretability:</strong> Grad-CAM & Multi-Head Self-Attention Maps"
+        ],
+        gnn: [
+            "<strong>Encoder:</strong> Dual-Pathway CNN + Pretrained EfficientNet-B3 Backbone",
+            "<strong>Bottleneck:</strong> 4-Layer Multi-Head Graph Attention Network (GAT)",
+            "<strong>Decoder:</strong> Attention U-Net with Additive Attention Gates",
+            "<strong>Target Classes:</strong> Background (0), Pancreas (1), Tumor (2)",
+            "<strong>Interpretability:</strong> Grad-CAM on EfficientNet Stage 5 Features"
+        ]
+    };
+
+    function updateSpecs(key) {
+        if (!specsList) return;
+        const specs = modelSpecs[key] || modelSpecs.pyramid;
+        specsList.innerHTML = specs.map(s => `<li>${s}</li>`).join("");
+    }
+
+    if (modelSelect) {
+        const urlParams = new URLSearchParams(window.location.search);
+        const modelParam = urlParams.get("model");
+        if (modelParam && modelSpecs[modelParam.toLowerCase()]) {
+            modelSelect.value = modelParam.toLowerCase();
+            updateSpecs(modelParam.toLowerCase());
+        }
+
+        modelSelect.addEventListener("change", (e) => {
+            updateSpecs(e.target.value);
+        });
+    }
+
     // File Input Handling
     fileInput.addEventListener("change", (e) => {
         if (e.target.files && e.target.files[0]) {
@@ -145,6 +198,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const formData = new FormData();
         formData.append("file", currentFile);
+        const modelSelect = document.getElementById("model-select");
+        if (modelSelect) {
+            formData.append("model_type", modelSelect.value);
+        }
 
         try {
             const response = await fetch("/api/predict_slice", {

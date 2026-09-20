@@ -5,7 +5,7 @@ and exports publication-grade plots and CSV/JSON summaries.
 """
 
 from pathlib import Path
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 import json
 import pandas as pd
 import numpy as np
@@ -31,6 +31,9 @@ def evaluate_held_out_test_set(
     data_dir: str = "data/Task07_Pancreas",
     output_dir: str = "results",
     device: torch.device | None = None,
+    model_class: Any = CNNPyramidTransformerSeg,
+    model_kwargs: Optional[Dict[str, Any]] = None,
+    prefix: str = "",
 ) -> Dict[str, Any]:
     """Runs 5-model soft ensemble evaluation on the held-out test set."""
     if device is None:
@@ -43,13 +46,17 @@ def evaluate_held_out_test_set(
     fig_dir = out_path / "figures"
     fig_dir.mkdir(parents=True, exist_ok=True)
 
+    default_kwargs = {"in_channels": 1, "num_classes": 3}
+    if model_kwargs:
+        default_kwargs.update(model_kwargs)
+
     # 1. Load trained models
     models = []
     scores = []
     for ckpt_p in checkpoint_paths:
         p = Path(ckpt_p)
         if p.exists():
-            model = CNNPyramidTransformerSeg(in_channels=1, num_classes=3)
+            model = model_class(**default_kwargs)
             data = torch.load(p, map_location=device)
             state_dict = data.get("model_state_dict", data)
             model.load_state_dict(state_dict)
@@ -61,7 +68,7 @@ def evaluate_held_out_test_set(
 
     if not models:
         logger.warning("No checkpoints found! Initializing single model for evaluation.")
-        models.append(CNNPyramidTransformerSeg(in_channels=1, num_classes=3))
+        models.append(model_class(**default_kwargs))
         scores = [1.0]
 
     ensemble = EnsemblePredictor(models, device, weights=scores)
@@ -159,10 +166,13 @@ def evaluate_held_out_test_set(
         {"metric": "MCC", "actual_value": metrics.get("mcc", 0.0), "unit": "score"},
     ]
 
-    pd.DataFrame(summary_rows).to_csv(out_path / "final_metrics.csv", index=False)
+    csv_name = f"{prefix}final_metrics.csv" if prefix else "final_metrics.csv"
+    json_name = f"{prefix}final_metrics.json" if prefix else "final_metrics.json"
+    pd.DataFrame(summary_rows).to_csv(out_path / csv_name, index=False)
 
-    with open(out_path / "final_metrics.json", "w", encoding="utf-8") as f:
+    with open(out_path / json_name, "w", encoding="utf-8") as f:
         json.dump(metrics, f, indent=2)
 
     logger.info(f"Test Set Evaluation Completed! Accuracy: {metrics['overall_accuracy']:.4f}, Tumor Dice: {metrics['tumor_dice']:.4f}")
     return metrics
+

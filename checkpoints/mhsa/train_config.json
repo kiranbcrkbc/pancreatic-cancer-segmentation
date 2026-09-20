@@ -1,0 +1,13 @@
+{
+  "model_key": "mhsa",
+  "optimizer": "AdamW",
+  "learning_rate": 0.0001,
+  "epochs": 3,
+  "batch_size": 8,
+  "loss_kwargs": {
+    "dice_w": 0.5,
+    "ce_w": 0.2,
+    "focal_w": 0.2,
+    "boundary_w": 0.1
+  }
+}

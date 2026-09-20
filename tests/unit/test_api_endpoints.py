@@ -83,3 +83,24 @@ def test_w_health_endpoint_schema(client):
     assert data["model_loaded"] is True
     assert data["num_classes"] == 3
     assert data["classes"] == ["Background", "Pancreas", "Tumor"]
+    assert "available_models" in data
+
+
+def test_multi_model_selection(client):
+    # Test model selection across all 4 architectures
+    arr = (np.random.rand(128, 128) * 255).astype(np.uint8)
+    img = Image.fromarray(arr)
+
+    for m in ["pyramid", "cbam", "mhsa", "gnn"]:
+        buf = io.BytesIO()
+        img.save(buf, format="PNG")
+        buf.seek(0)
+        files = {"file": ("test_slice.png", buf, "image/png")}
+        data = {"model_type": m}
+        res = client.post("/api/predict_slice", files=files, data=data)
+        assert res.status_code == 200
+        res_data = res.json()
+        assert res_data["model_used"] == m
+        assert "predicted_mask" in res_data
+        assert "gradcam_heatmap" in res_data
+
