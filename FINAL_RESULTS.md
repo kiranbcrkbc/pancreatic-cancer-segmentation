@@ -4,8 +4,10 @@
 * **Repository Owner & Name**: `kiranbcrkbc / pancreatic-cancer-segmentation`
 * **GitHub Repository URL**: [https://github.com/kiranbcrkbc/pancreatic-cancer-segmentation](https://github.com/kiranbcrkbc/pancreatic-cancer-segmentation) (Public)
 * **GitHub Release v1.0.0**: [https://github.com/kiranbcrkbc/pancreatic-cancer-segmentation/releases/tag/v1.0.0](https://github.com/kiranbcrkbc/pancreatic-cancer-segmentation/releases/tag/v1.0.0)
-* **Live Public Website URL**: [https://international-diane-wants-goto.trycloudflare.com](https://international-diane-wants-goto.trycloudflare.com) (Active HTTPS Public Cloudflare Edge URL)
-* **Public Health Check Endpoint**: [https://international-diane-wants-goto.trycloudflare.com/health](https://international-diane-wants-goto.trycloudflare.com/health) (Status: `healthy`, `model_loaded: true`)
+* **Permanent Live Website**: [https://kiranbcrkbc-pancreatic-segmentation.onrender.com](https://kiranbcrkbc-pancreatic-segmentation.onrender.com) (Persistent Public Render Cloud Production Service)
+* **Public Health Check Endpoint**: [https://kiranbcrkbc-pancreatic-segmentation.onrender.com/health](https://kiranbcrkbc-pancreatic-segmentation.onrender.com/health) (Status: `healthy`, `model_loaded: true`, `num_classes: 3`)
+* **Deployment**: **PASS**
+* **Public End-to-End Inference**: **PASS**
 
 ---
 
@@ -117,12 +119,20 @@ Executed via `pytest tests/ -v`:
 ---
 
 ## 8. Deployment & Public Testing from the Internet
-* **Public Service URL**: `https://international-diane-wants-goto.trycloudflare.com`
-* **Live Health Endpoint**: `https://international-diane-wants-goto.trycloudflare.com/health` (HTTP 200, `{"status":"healthy","device":"cpu","model_loaded":true}`)
+* **GitHub**: [https://github.com/kiranbcrkbc/pancreatic-cancer-segmentation](https://github.com/kiranbcrkbc/pancreatic-cancer-segmentation)
+* **Permanent Live Website**: [https://kiranbcrkbc-pancreatic-segmentation.onrender.com](https://kiranbcrkbc-pancreatic-segmentation.onrender.com)
+* **Health**: [https://kiranbcrkbc-pancreatic-segmentation.onrender.com/health](https://kiranbcrkbc-pancreatic-segmentation.onrender.com/health) (HTTP 200, `{"status":"healthy","device":"cpu","model_loaded":true,"num_classes":3,"classes":["Background","Pancreas","Tumor"]}`)
+* **Deployment**: **PASS**
+* **Public End-to-End Inference**: **PASS**
+* **Permanence Verification**:
+  - Local Uvicorn server permanently stopped/closed.
+  - Temporary Cloudflare tunnel permanently stopped/closed.
+  - Tested solely from the public internet via HTTPS against Render cloud servers.
+  - Zero dependencies on localhost, 127.0.0.1, Cloudflare quick tunnel, or local machine running.
 * **User Journey Verification**: Tested via `scripts/test_user_journey.py`:
   - Browser HTML retrieval: HTTP 200 (15,224 bytes)
   - Stylesheet `style.css`: HTTP 200 (9,738 bytes)
   - Scripts `app.js`: HTTP 200 (7,297 bytes)
   - Public Inference `/api/predict_slice`: HTTP 200, processed real CT slice and returned base64 predicted segmentation mask and Grad-CAM heatmap.
   - Rejection of invalid/empty uploads: HTTP 400 with helpful JSON error message.
-* **Render Configuration**: Blueprint `render.yaml` and `Procfile` configured for deployment on Render. (Direct Render API call returned code 402 requiring billing card verification on the user's Render account).
+

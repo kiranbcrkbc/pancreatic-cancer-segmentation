@@ -14,7 +14,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from src.models.cnn_transformer import CNNPyramidTransformerSeg
 from src.losses.compound_loss import CompoundLoss
 
-PUBLIC_URL = "https://international-diane-wants-goto.trycloudflare.com"
+PUBLIC_URL = "https://kiranbcrkbc-pancreatic-segmentation.onrender.com"
 
 def run_production_quality_gate() -> bool:
     checks = {}

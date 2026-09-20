@@ -151,8 +151,8 @@ All metrics reported below are **strictly empirical and mathematically derived**
 
 ## 7. Production Deployment & Live Website
 
-* **Public Live Website**: [https://international-diane-wants-goto.trycloudflare.com](https://international-diane-wants-goto.trycloudflare.com)
-* **Public Health Endpoint**: [https://international-diane-wants-goto.trycloudflare.com/health](https://international-diane-wants-goto.trycloudflare.com/health)
+* **Permanent Live Website**: [https://kiranbcrkbc-pancreatic-segmentation.onrender.com](https://kiranbcrkbc-pancreatic-segmentation.onrender.com)
+* **Public Health Endpoint**: [https://kiranbcrkbc-pancreatic-segmentation.onrender.com/health](https://kiranbcrkbc-pancreatic-segmentation.onrender.com/health)
 * **GitHub Repository**: [https://github.com/kiranbcrkbc/pancreatic-cancer-segmentation](https://github.com/kiranbcrkbc/pancreatic-cancer-segmentation)
 * **GitHub Model Release v1.0.0**: [https://github.com/kiranbcrkbc/pancreatic-cancer-segmentation/releases/tag/v1.0.0](https://github.com/kiranbcrkbc/pancreatic-cancer-segmentation/releases/tag/v1.0.0)
 
