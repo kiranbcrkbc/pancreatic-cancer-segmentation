@@ -49,11 +49,28 @@ def get_script():
 # Device and Model initialization
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model = CNNPyramidTransformerSeg(in_channels=1, num_classes=3)
-ckpt_path = Path("checkpoints/final_model.pt")
-if not ckpt_path.exists():
-    ckpt_path = Path("checkpoints/fold1_best.pt")
 
-if ckpt_path.exists():
+def ensure_model_checkpoint() -> Path:
+    target_path = Path("checkpoints/final_model.pt")
+    if target_path.exists() and target_path.stat().st_size > 1000:
+        return target_path
+    fold1 = Path("checkpoints/fold1_best.pt")
+    if fold1.exists() and fold1.stat().st_size > 1000:
+        return fold1
+    release_url = "https://github.com/kiranbcrkbc/pancreatic-cancer-segmentation/releases/download/v1.0.0/final_model.pt"
+    print(f"Fetching production checkpoint from {release_url}...")
+    target_path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        import urllib.request
+        urllib.request.urlretrieve(release_url, str(target_path))
+        print("Model checkpoint fetched successfully.")
+        return target_path
+    except Exception as e:
+        print(f"Warning: could not download model weights: {e}")
+        return target_path
+
+ckpt_path = ensure_model_checkpoint()
+if ckpt_path.exists() and ckpt_path.stat().st_size > 1000:
     try:
         data = torch.load(ckpt_path, map_location=device)
         state_dict = data.get("model_state_dict", data)
@@ -72,7 +89,7 @@ def health_check() -> Dict[str, Any]:
     return {
         "status": "healthy",
         "device": str(device),
-        "model_loaded": ckpt_path.exists(),
+        "model_loaded": ckpt_path.exists() and (ckpt_path.stat().st_size > 1000),
         "num_classes": 3,
         "classes": ["Background", "Pancreas", "Tumor"],
     }
@@ -92,7 +109,13 @@ def index():
 async def predict_slice(file: UploadFile = File(...)):
     """Accepts image slice upload, runs segmentation and Grad-CAM, returns base64 images."""
     content = await file.read()
-    pil_img = Image.open(io.BytesIO(content)).convert("L")
+    if not content or len(content) == 0:
+        return JSONResponse(status_code=400, content={"error": "Uploaded file is empty"})
+    try:
+        pil_img = Image.open(io.BytesIO(content)).convert("L")
+    except Exception as e:
+        return JSONResponse(status_code=400, content={"error": f"Invalid image format: {str(e)}"})
+
     img_np = np.array(pil_img, dtype=np.float32) / 255.0
 
     proc_sl = preprocessor.process_slice(img_np)

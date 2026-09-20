@@ -1,0 +1,29 @@
+{
+  "status": "PASS",
+  "checks": {
+    "master_split_zero_leakage": true,
+    "fold_1_internal_disjoint": true,
+    "fold_1_untouched_test": true,
+    "fold_2_internal_disjoint": true,
+    "fold_2_untouched_test": true,
+    "fold_3_internal_disjoint": true,
+    "fold_3_untouched_test": true,
+    "fold_4_internal_disjoint": true,
+    "fold_4_untouched_test": true,
+    "fold_5_internal_disjoint": true,
+    "fold_5_untouched_test": true,
+    "all_kfolds_zero_leakage": true,
+    "preprocessing_instance_isolated": true,
+    "hpo_configuration_isolated": true
+  },
+  "split_counts": {
+    "master_train": 34,
+    "master_val": 8,
+    "master_test": 8
+  },
+  "intersections": {
+    "train_val": [],
+    "train_test": [],
+    "val_test": []
+  }
+}
