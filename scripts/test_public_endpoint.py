@@ -6,7 +6,7 @@ import urllib.request
 import numpy as np
 from PIL import Image
 
-PUBLIC_URL = "https://international-diane-wants-goto.trycloudflare.com"
+PUBLIC_URL = "https://kiranbcrkbc-pancreatic-segmentation.onrender.com"
 
 def test_public():
     print(f"Testing public URL: {PUBLIC_URL}")

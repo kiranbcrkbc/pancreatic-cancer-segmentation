@@ -50,7 +50,7 @@ class GradCAMSeg:
 
         # Target score is the sum of logits for the target class across all spatial locations
         score = logits[0, target_class].sum()
-        score.backward(retain_graph=True)
+        score.backward(retain_graph=False)
 
         if self.gradients is None or self.activations is None:
             h, w = input_tensor.shape[2], input_tensor.shape[3]

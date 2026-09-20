@@ -8,6 +8,8 @@ from typing import Dict, Any, Optional
 import io
 import base64
 import numpy as np
+import matplotlib
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from PIL import Image
 import torch
@@ -139,20 +141,25 @@ async def predict_slice(file: UploadFile = File(...)):
     cam_heatmap = cam_engine.generate_heatmap(t, target_class=2)
     cam_engine.close()
 
-    # Convert to base64 images
-    def to_b64(arr, cmap="gray", vmin=None, vmax=None):
-        fig, ax = plt.subplots(figsize=(3, 3))
-        ax.imshow(arr, cmap=cmap, vmin=vmin, vmax=vmax)
-        ax.axis("off")
+    # Convert to base64 images without creating GUI/Matplotlib figures
+    def to_b64(arr: np.ndarray, cmap_name: str = "gray", vmin: float = 0.0, vmax: float = 1.0) -> str:
+        diff = max(vmax - vmin, 1e-6)
+        if cmap_name == "gray":
+            norm = np.clip((arr - vmin) / diff * 255.0, 0, 255).astype(np.uint8)
+            pil = Image.fromarray(norm, mode="L")
+        else:
+            norm_arr = np.clip((arr - vmin) / diff, 0.0, 1.0)
+            cmap = plt.get_cmap(cmap_name)
+            rgba = (cmap(norm_arr) * 255).astype(np.uint8)
+            pil = Image.fromarray(rgba, mode="RGBA")
         buf = io.BytesIO()
-        plt.savefig(buf, format="png", bbox_inches="tight", pad_inches=0)
-        plt.close(fig)
-        buf.seek(0)
-        return base64.b64encode(buf.read()).decode("utf-8")
+        pil.save(buf, format="PNG")
+        return base64.b64encode(buf.getvalue()).decode("utf-8")
 
-    img_b64 = to_b64(patch_img, cmap="gray")
-    pred_b64 = to_b64(preds, cmap="viridis", vmin=0, vmax=2)
-    cam_b64 = to_b64(cam_heatmap, cmap="jet")
+    img_b64 = to_b64(patch_img, cmap_name="gray", vmin=0.0, vmax=1.0)
+    pred_b64 = to_b64(preds.astype(float), cmap_name="viridis", vmin=0.0, vmax=2.0)
+    cam_b64 = to_b64(cam_heatmap, cmap_name="jet", vmin=0.0, vmax=1.0)
+
 
     # Metrics on patch
     has_tumor = bool(np.any(preds == 2))
