@@ -1,0 +1,21 @@
+loss:
+  compound_weights:
+    dice_w: 0.6
+    ce_w: 0.3
+    focal_w: 0.1
+    boundary_w: 0.0
+    focal_tversky_w: 0.0
+    class_weights: [0.05, 0.30, 0.65]
+  dice:
+    smooth: 1.0e-5
+    include_background: true
+    classes_averaged: 3
+  weighted_ce:
+    class_weights: [0.05, 0.30, 0.65]
+  focal:
+    alpha: 0.25
+    gamma: 2.0
+  focal_tversky:
+    alpha: 0.3
+    beta: 0.7
+    gamma: 1.33

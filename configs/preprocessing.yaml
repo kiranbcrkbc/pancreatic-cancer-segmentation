@@ -1,0 +1,16 @@
+preprocessing:
+  hu_min: -150.0
+  hu_max: 250.0
+  normalize_min: 0.0
+  normalize_max: 1.0
+  resample_spacing_mm: [1.0, 1.0, 1.0]
+  slice_intermediate_size: [256, 256]
+  gaussian_sigma: 0.5
+  clahe:
+    engine: "skimage"
+    clip_limit: 0.03
+  roi_extractor:
+    min_foreground_pixels: 50
+    margin_px: 10
+    context_scale: 1.5
+    patch_size: [128, 128]

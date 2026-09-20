@@ -1,0 +1,86 @@
+PROJECT SPECIFICATION
+Pancreatic Cancer Segmentation — Residual CNN + Multi-Head Self-Attention (MHSA)+ (add any architecture that improvises the results along with the above-mentioned model)
+
+  Dataset: Medical Segmentation Decathlon — Task 07 (Pancreas)
+1. Project Overview
+The goal of this project is to build a 3D semantic segmentation pipeline for pancreatic CT scans that identifies three classes — background, pancreas, and tumor — using a Residual CNN encoder combined with a Multi-Head Self-Attention (MHSA) module. The model must also support Grad-CAM based explainability (XAI) to visualize and validate what regions the network is attending to when making predictions.
+2. Dataset
+Source: Medical Segmentation Decathlon (MSD) — Task 07 (Pancreas). the dataset is a strict requirement.
+Classes: 3 — Background, Pancreas, Tumor.
+Format: NIfTI (.nii.gz) volumetric CT scans with corresponding segmentation masks.
+Data split:
+Training: 70%
+Validation: 15%
+Testing: 15%
+Cross-validation: 5-fold cross-validation is required on top of the above split (apply 5-fold CV within the training/validation pool, and report averaged metrics across folds).each fold should have min 20 ephocs.
+3. Preprocessing Pipeline
+Apply preprocessing steps in the following order:
+ROI-based patch extraction.
+CLAHE 
+Targeted zoom augmentation 
+Elastic deformation 
+Multiscale training 
+Attention-guided augmentation 
+apart from these ,add whatever is required for a proper outcome
+4. Model Architecture — Residual CNN + MHSA
+Encoder: Residual CNN (ResNet-style residual blocks) feeding into a Multi-Head Self-Attention module, followed by a decoder for pixel/voxel-wise segmentation output. Final numeric configuration below.
+
+Explainability module: Grad-CAM must be integrated to visualize attention/activation regions driving the segmentation decision. Use Grad-CAM outputs both for qualitative validation (visual sanity-check against tumor location) and as an input signal to the attention-guided augmentation step in preprocessing.
+Full architecture label as given by the project owner: "CNN + Multi-Head Self-Attention + Grad-CAM + Explainable AI."
+5. Training Configuration Summary
+Optimizer: AdamW
+Learning rate: 1 × 10⁻⁴ (tunable range: 1e-5 to 3e-4)
+Weight decay: 1 × 10⁻⁵ (tunable range: 1e-5 to 1e-2)
+Loss function: composite loss = Dice Loss + Focal Loss + Boundary Loss (get exact per-term weighting confirmed with project owner before finalizing — not specified in source notes)
+Batch size:  8 based on available GPU VRAM (3D CT volumes are memory-heavy)
+Cross-validation: 5-fold
+Batch wise training, (note: not image or slice)
+6. Hyperparameter Optimization
+Use the Aquila Optimizer (metaheuristic optimization algorithm) to search over the hyperparameter ranges listed in Section 4 (heads, embedding dimension, dropout, FFN dimension, attention layers, learning rate, weight decay, batch size).
+Use the resulting Grad-CAM outputs at each candidate configuration as part of evaluating which hyperparameter set is best — i.e., the optimizer selection should account for both quantitative segmentation performance and Grad-CAM interpretability quality.
+Use LIME 
+7. Evaluation Metrics (Mandatory)
+All of the following metrics must be computed and reported. Dice and IoU must be reported per class.
+
+  Critical success criterion: Tumour-class Dice score MUST be ≥ 0.84. This is a hard requirement from the project owner ("ma’am’s requirement") and is the primary bar for project acceptance — it takes priority over other metrics if trade-offs are needed.
+8. Environment & Dependencies (to confirm/set up)
+Python 3.9+ recommended for compatibility with common medical imaging libraries.
+Deep learning framework: PyTorch (recommended for MONAI compatibility) — confirm with project owner if TensorFlow is required instead.
+Suggested libraries: MONAI or nibabel (NIfTI I/O), numpy, scikit-learn (for MCC/AUC/mAP), scikit-image (CLAHE), torchio or MONAI transforms (elastic deformation, augmentation), pytorch-grad-cam or a custom Grad-CAM implementation, matplotlib/seaborn (visualization).
+GPU: CUDA-enabled GPU required; 3D volumes + attention layers are memory-intensive — recommend minimum 16GB VRAM, more if using batch size 8 at high resolution.
+Track experiments with TensorBoard or Weights & Biases (W&B) — recommended so hyperparameter search runs (Aquila Optimizer) and 5-fold CV results are all logged and comparable.
+9. Expected Deliverables
+Complete, documented codebase (data loading, preprocessing pipeline, model definition, training loop, evaluation script, Grad-CAM visualization script).
+Trained model checkpoint(s) — best model per fold and final averaged/ensembled model if applicable.
+Hyperparameter search logs/results from the Aquila Optimizer run.
+5-fold cross-validation results table with all mandatory metrics (Section 7), broken down per class where applicable.
+Grad-CAM visualizations for a representative sample of test cases, especially tumor cases.
+Final evaluation report confirming tumor Dice ≥ 0.84, or a clear explanation and results if that threshold is not met.
+Inference script that takes a new CT volume and outputs the segmentation mask + Grad-CAM overlay.
+README covering environment setup, how to reproduce training, and how to run inference.
+10. Additional Notes 
+This is a research/academic project with a specific faculty/supervisor requirement (tumor Dice ≥ 0.84) — treat this as the top-priority success metric.
+Please provide the notebook along with the other materials.
+Hyperparameter | Final Value | Search Range (if re-tuning)
+CNN Encoder | Residual CNN | —
+Number of Attention Heads | 8 | 4, 8, 12
+Embedding Dimension | 512 | 128, 256, 512
+Attention Dropout | 0.1 | 0.0, 0.1, 0.2
+FFN Dimension | 2048 | 512, 1024, 2048
+Attention Layers | 4 | 2, 4, 6
+Optimizer | AdamW | —
+Learning Rate | 1 × 10⁻⁴ | 1e-5 to 3e-4
+Weight Decay | 1 × 10⁻⁵ | 1e-5 to 1e-2
+Batch Size | As per hardware (3D CT) | 2,4, 8
+Loss Function | Dice + Focal + Boundary Loss | —
+Validation Strategy | 5-fold cross-validation | —
+Metric | Reporting Requirement
+Dice Score | Mandatory — report separately for Background, Pancreas, and Tumor classes
+IoU (Intersection over Union) | Mandatory — per class
+Precision | Mandatory
+Recall (Sensitivity) | Mandatory
+F1 Score | Mandatory
+Accuracy | Mandatory
+AUC-ROC | Mandatory
+mAP (Mean Average Precision) | Mandatory
+MCC (Matthews Correlation Coefficient) | Mandatory

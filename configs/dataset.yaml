@@ -1,0 +1,20 @@
+dataset:
+  name: "Medical Segmentation Decathlon Task 07 (Pancreas)"
+  raw_dir: "data/Task07_Pancreas"
+  images_tr_dir: "data/Task07_Pancreas/imagesTr"
+  labels_tr_dir: "data/Task07_Pancreas/labelsTr"
+  images_ts_dir: "data/Task07_Pancreas/imagesTs"
+  splits_dir: "data/splits"
+  master_split_file: "data/splits/split_70_15_15.json"
+  kfold_file: "data/splits/kfold_5.json"
+  classes:
+    0: "Background"
+    1: "Pancreas Parenchyma"
+    2: "Pancreatic Tumor"
+  num_classes: 3
+  split_ratio:
+    train: 0.70
+    val: 0.15
+    test: 0.15
+  num_cv_folds: 5
+  seed: 42

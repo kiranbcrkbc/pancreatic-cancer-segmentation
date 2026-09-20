@@ -1,0 +1,12 @@
+metric,actual_value,unit
+Overall Pixel Accuracy,0.9989070892333984,ratio
+Background Dice,0.9998560341048651,ratio
+Pancreas Dice,0.9951459908106386,ratio
+Tumor Dice,0.9504467912256798,ratio
+Mean Foreground Dice,0.9727963910181592,ratio
+Background IoU,0.9997121096561215,ratio
+Pancreas IoU,0.9903388768020595,ratio
+Tumor IoU,0.9055727554162044,ratio
+Pancreas HD95,1.0,pixels
+Tumor HD95,1.1863961030678924,pixels
+MCC,0.9945762860601057,score

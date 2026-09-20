@@ -1,0 +1,23 @@
+training:
+  optimizer: "AdamW"
+  lr: 1.0e-3
+  weight_decay: 1.0e-5
+  scheduler: "CosineAnnealingLR"
+  t_max: 50
+  eta_min: 1.0e-6
+  batch_size: 8
+  epochs_per_fold: 50
+  early_stopping:
+    enabled: true
+    patience: 10
+    min_delta: 1.0e-4
+    monitor: "val_mean_dice"
+    mode: "max"
+  gradient_clip_norm: 1.0
+  mixed_precision: true
+  num_workers: 0
+  pin_memory: true
+  checkpoint_dir: "checkpoints"
+  log_dir: "logs"
+  results_dir: "results"
+  seed: 42

@@ -1,0 +1,117 @@
+PROJECT SPECIFICATION
+Pancreatic Cancer Segmentation — Residual CNN + Multi-Scale Pyramid Transformer (Multi-Head Self-Attention)
+Extracted directly from the project notebook (source of truth)  |  Dataset: Medical Segmentation Decathlon — Task 07 (Pancreas)
+IMPORTANT: A separate reference PDF was provided describing a different architecture (AttnUNet + pretrained EfficientNet-B3 + 4-layer Graph Attention Network). That PDF does NOT match the model actually implemented in the notebook (Residual CNN encoder + Multi-Head Self-Attention Pyramid Transformer bottleneck). Per your instruction, this document uses the NOTEBOOK as the authoritative source for all architecture and training parameters, since that is the model actually coded and run. Dataset and general preprocessing category (HU windowing, normalization, CLAHE, ROI, resizing) are conceptually the same across both documents, but exact preprocessing values, loss weights, metric results, and hyperparameters below are taken from the notebook, not the PDF. See Section 11 for a full list of conflicts, in case you need to reconcile this with your supervisor's expectations.
+1. Project Overview
+The pipeline performs 2D slice-wise semantic segmentation of pancreatic CT scans into three classes — background, pancreas, tumor — using a custom architecture the notebook names CNNPyramidTransformerSeg: a Residual-CNN encoder, a Pyramid Pooling Module + Multi-Head Self-Attention transformer bottleneck, and a U-Net-style decoder with skip connections. The model supports Grad-CAM, raw attention-map visualization, and LIME for explainability.
+2. Dataset
+Source: Medical Segmentation Decathlon (MSD) — Task 07 (Pancreas). Loaded from dataset.json + imagesTr/labelsTr NIfTI volumes.
+Classes: 3 — Background (0), Pancreas (1), Tumor (2).
+Patient-level split (random, seed=42): Training 70%, Validation 15%, Testing 15%. Saved to split_70_15_15.json.
+5-fold cross-validation: performed on the combined Train+Validation pool (train_ids + val_ids merged), using sklearn KFold(n_splits=5, shuffle=True, random_state=42). Saved to kfold_5.json. The held-out 15% Test set is NOT part of any fold — it is only used for final ensemble evaluation.
+Environment note: dataset paths are Kaggle-specific (/kaggle/input/datasets/.../Task07_Pancreas, /kaggle/working/pancreas_project) — the developer will need to update these paths for any non-Kaggle environment.
+3. Preprocessing Pipeline (as implemented in code)
+Volume-level preprocessing (CTPreprocessor.preprocess_volume), applied in this order:
+HU windowing / clipping — np.clip(volume, hu_min=-150, hu_max=250).
+Min-max normalization — (vol - hu_min) / (hu_max - hu_min) → range [0, 1], cast to float32.
+Resampling to isotropic 1.0×1.0×1.0 mm spacing using scipy.ndimage.zoom (order=1).
+Per-slice preprocessing (CTPreprocessor.process_slice), applied after the volume step, per 2D axial slice:
+Resize slice to 256×256 (skimage.transform.resize, mode='reflect', anti_aliasing=True).
+Gaussian smoothing — sigma=0.5 (scipy.ndimage.gaussian_filter).
+CLAHE — skimage.exposure.equalize_adapthist, clip_limit=0.03 (compared against 0.01/0.03/0.05 and global histogram equalization during experimentation; 0.03 was selected).
+ROI-based patch extraction (ROIPatchExtractor), applied after per-slice preprocessing, on slices whose mask has ≥50 foreground pixels (min_area=50):
+Compute the 2D bounding box of the non-background mask region, with a 10px margin.
+Expand the box to a square using context_scale=1.5× the larger side, centered on the bbox centroid.
+Crop both image and mask to that square, then resize to a fixed 128×128 patch (image: bilinear + anti-aliasing; mask: nearest-neighbor, order=0).
+Slices with no foreground are skipped entirely (or fall back to the full resized 256×256 slice if extraction fails).
+Final effective training resolution: img_size is reset from 256 → 128 after ROI extraction (CFG['img_size'] = ROI_EXTRACTOR.patch_size). All model training happens on 128×128 ROI patches, not full 256×256 slices.
+4. Data Augmentation
+Two augmentation layers exist in the notebook:
+Main training augmentation (used in the actual 5-fold training loop) — an Albumentations pipeline (TRAIN_AUG) applied to every 128×128 patch: HorizontalFlip(p=0.5), VerticalFlip(p=0.3), RandomRotate90(p=0.3), ShiftScaleRotate(shift=0.05, scale=0.1, rotate=15°, p=0.5), ElasticTransform(alpha=60, sigma=4, p=0.3), GridDistortion(p=0.2), RandomCrop(96×96, p=0.3) + PadIfNeeded back to 128×128, RandomGamma(80–120, p=0.3), RandomBrightnessContrast(±0.2, p=0.4), GaussNoise(var 0.001–0.005, p=0.3), GaussianBlur(blur_limit=3, p=0.2), CoarseDropout(max_holes=4, max_h/w=12, p=0.2). Validation/test use only PadIfNeeded (no randomness).
+Standalone augmentation classes (defined, demoed on sample images, but NOT called inside the actual 5-fold training loop — flagged in Section 10): TargetedZoomAug (zoom_range 0.5–1.5, p=0.5), ElasticDeformer (a second, separate elastic-deformation implementation with alpha=120, sigma=10, p=0.4 — different parameters from the Albumentations ElasticTransform above), MultiScaleDataset (random resolution per sample from [128, 192, 256], fixed 256 for val/test), and AttentionGuidedAug (saliency-driven noise/brightness augmentation using a hook on the model bottleneck, noise_inside≈0.03–0.04, noise_outside=0.005, brightness_range=(0.85,1.15), threshold≈70–75th percentile, p=0.5).
+5. Model Architecture — CNNPyramidTransformerSeg
+Residual-CNN encoder (4 stages, each = 2× ResBlock with BatchNorm+ReLU+Dropout and a projection shortcut) → MaxPool2d(2) between stages → Pyramid-Transformer bottleneck → U-Net decoder with skip concatenation.
+Encoder channel progression: 64 → 128 → 256 → 512 (stages enc1–enc4), each followed by MaxPool2d(2).
+Bottleneck (TransformerBottleneck): 1×1 conv projects 512→embed_dim → Pyramid Pooling Module (PSPNet-style, pool sizes 1/2/4/8) for multi-scale context → N stacked MultiHeadSelfAttention2D layers (standard pre-norm transformer block: nn.MultiheadAttention + LayerNorm + GELU feed-forward of size embed_dim×4) → 1×1 conv projects back to 512 channels.
+Decoder: 4 stages of ConvTranspose2d(stride 2) upsampling + concatenation with the matching encoder skip + ResBlock, channel path 512→256→128→64→32, then a final 1×1 Conv2d to 3 output classes (logits, no final activation — softmax/argmax applied downstream).
+
+Explainability module: Grad-CAM (custom GradCAMSeg class) hooked on xai_model.enc4[-1].conv1.block[0] (last encoder residual block's first conv layer), targets a chosen class channel summed over all pixels, backprops to get channel-weighted activation maps. Raw transformer self-attention weights are also visualized directly via forward hooks on the bottleneck's attention layers. LIME (lime_image, 150 perturbation samples) is additionally applied for pancreas/tumor superpixel explanations. SHAP is installed as a dependency but is not actually invoked anywhere in the notebook.
+6. Loss Function (as implemented)
+combined_loss = 0.6 × Dice Loss + 0.3 × weighted Cross-Entropy + 0.1 × Focal Loss (weights: dice_w=0.6, ce_w=0.3, focal_w=0.1).
+Dice Loss: multi-class soft Dice, averaged over all 3 classes, smooth=1e-5.
+Weighted Cross-Entropy: per-class weights CLASS_W = [0.1 background, 0.3 pancreas, 0.6 tumor] — tumor is up-weighted 6× relative to background to counter the tumor class making up only ~2–5% of labeled voxels.
+Focal Loss: alpha=0.25, gamma=2.0, applied on top of standard cross-entropy.
+Note: there is no explicit Boundary Loss term in the notebook's loss function, despite that being mentioned as a requirement elsewhere — see Section 11.
+7. Hyperparameter Optimization
+Tool used: Optuna (TPESampler, seed=42) with a MedianPruner (n_startup_trials=3, n_warmup_steps=1) — NOT the 'Aquila Optimizer' mentioned verbally by the project owner. See Section 11.
+12 trials total, 3 quick-training epochs per trial, on a reduced 200-sample subset at 128×128 resolution, batch size per-trial from {4, 8}.
+Search space: learning rate, batch size, dropout, transformer depth, num_heads, embed_dim, weight_decay, optimizer choice (Adam vs AdamW) — full ranges listed in the Section 5 table.
+Objective (maximized): mean of (Pancreas Dice + Tumor Dice) / 2 on the validation subset after 3 epochs.
+Best parameters are saved to results/best_hparams.json and used to update CFG before the main 5-fold training run.
+8. Training Configuration & Procedure
+Optimizer: AdamW, lr and weight_decay taken from the (Optuna-tuned) CFG.
+LR schedule: CosineAnnealingLR, T_max = num_epochs (50), eta_min = 1e-6, stepped once per epoch.
+Mixed precision (AMP) via torch.cuda.amp.autocast + GradScaler when a GPU is available.
+Gradient clipping: max norm 1.0 (after unscaling).
+Early stopping: patience=10 epochs, on the mean of (Pancreas Dice + Tumor Dice)/2 improving by more than delta=1e-4.
+Procedure: for each of the 5 folds — build fold-specific train/val loaders (train uses TRAIN_AUG, val uses VAL_AUG only) from the merged train+val pool, train a fresh CNNPyramidTransformerSeg up to 50 epochs with early stopping, checkpoint the best epoch (by mean Dice) to checkpoints/fold{N}_best.pt, and log scalars (train/val loss, per-class Dice) to TensorBoard.
+Final test-time inference: 5-model soft ensemble — softmax probabilities from all 5 fold checkpoints are averaged (ensemble_predict), and metrics are computed from that averaged probability map on the held-out test set.
+9. Evaluation Metrics (as implemented)
+Computed via compute_metrics() (per-class Dice/IoU/Precision/Recall/F1/Sensitivity/Specificity from confusion counts) plus a separate comprehensive pass (Accuracy, ROC-AUC, mAP/Average-Precision, MCC) using sklearn, all evaluated on the ensembled test-set predictions:
+
+The notebook does not hardcode a target/pass threshold for tumor Dice — confirm the ≥0.84 tumor-Dice requirement (mentioned separately by the project owner) against actual results once training completes; it is not enforced anywhere in code.
+10. Notebook Cleanup Notes for the Developer
+Cells 38–40 (Grad-CAM setup + attention-map hook) and Cells 41–42 (LIME explanation) are exact duplicates of each other — safe to remove one copy of each when tidying the final codebase.
+Cells 24–27 recompute/reload the Optuna best hyperparameters redundantly (plots re-drawn twice, CFG updated once inline and once from the saved JSON) — consolidate into a single clean cell.
+MultiScaleDataset / make_multiscale_loaders (Step 5, 'multi-scale training') is fully defined and previewed but is never actually called by the main 5-fold training loop, which uses the fixed-128×128 FoldDataset instead. Confirm with the project owner whether multi-scale training is actually required for grading, or whether the current fixed-resolution setup is acceptable — if required, the training loop needs to be switched to make_multiscale_loaders().
+AttentionGuidedAug (Step 6) is similarly defined and demoed on a single sample but is not wired into TRAIN_AUG or FoldDataset — the actual training augmentation is Albumentations-only. Same confirmation needed as above.
+Two different elastic-deformation implementations exist with different parameters (Albumentations ElasticTransform alpha=60/sigma=4 inside TRAIN_AUG, vs. the standalone ElasticDeformer class alpha=120/sigma=10 that is only demoed, not used in training) — pick one and document it if the discrepancy matters for grading.
+SHAP is installed via pip at the top of the notebook but is never called — either remove the dependency or add the SHAP explanation the project may be expected to include.
+All paths are Kaggle-specific (/kaggle/input/..., /kaggle/working/...) — will need updating for local, Colab, or any other environment.
+11. Discrepancies Between the Reference PDF and the Notebook
+The reference PDF you sent describes a different model and different reported results than what the notebook actually implements. Flagging these clearly so you can check with your supervisor which is correct:
+Architecture: PDF describes AttnUNet + pretrained EfficientNet-B3 backbone + 4-layer Graph Attention Network (GAT), with an Attention U-Net decoder using gated skip connections (att1–att4). The notebook implements a plain Residual-CNN encoder (no EfficientNet, no pretraining) + Pyramid-Pooling + standard Multi-Head Self-Attention transformer bottleneck (no graph attention) + a plain U-Net decoder (no attention gates).
+Hyperparameter optimizer: PDF's earlier verbal spec mentioned 'Aquila Optimizer.' The notebook uses Optuna (TPE + Median Pruner).
+Loss function: PDF specifies Cross-Entropy(0.30) + Dice(0.45) + Focal(0.25) + Focal Tversky(0.50) (α=0.3, β=0.7, γ=1.33). The notebook uses Dice(0.6) + weighted CE(0.3) + Focal(0.1) — no Focal Tversky term at all.
+Batch size: PDF says 16. Notebook default/search space tops out at 8.
+Preprocessing values differ: PDF's HU window is -100 to +250 with CLAHE clip 2.0/tile(8,8) and resize straight to 128×128 with dynamic class weights (0.0004/0.0822/2.9174) and 8-pass TTA. Notebook uses HU window -150 to +250, CLAHE clip_limit=0.03 (adaptive-hist scale, not the OpenCV 0–∞ clip-limit scale the PDF uses — these are not directly comparable numbers), a 256px intermediate resize before a separate 128×128 ROI-patch crop, fixed class weights [0.1, 0.3, 0.6], and no TTA at inference (only 5-fold ensembling).
+Reported test metrics: the PDF lists specific final numbers (e.g., Tumor Dice 57.80%, Tumor ROC-AUC 93.40%). These appear to be results from the PDF's different model/pipeline, not the notebook — the notebook does not contain these numeric results as fixed outputs; they only appear after training actually runs on real hardware.
+Given your instruction, this document treats the notebook as authoritative for the architecture and all training parameters, since "the model used is different" from the PDF. Preprocessing and dataset handling are aligned in category (HU windowing → normalize → CLAHE → ROI → resize) between the two sources, but not in exact numeric values — the values in Sections 3, 5, 6, 7, 8 above are the notebook's actual numbers.
+12. Expected Deliverables
+Cleaned-up notebook/codebase (de-duplicated per Section 10) with data loading, preprocessing, augmentation, model, training loop, evaluation, and XAI clearly separated.
+5 fold checkpoints (fold1_best.pt … fold5_best.pt) plus the Optuna best_hparams.json.
+Test-set metrics CSV (test_metrics.csv) with per-class Dice/IoU/Precision/Recall/F1/Sensitivity/Specificity, plus the comprehensive Accuracy/ROC-AUC/mAP/MCC pass.
+Grad-CAM, raw attention-map, and LIME visualization outputs (saved under the xai/ folder as in the notebook).
+Final results dashboard image and full project summary printout (as produced by the notebook's closing cells).
+Written confirmation of whether tumor Dice meets the ≥0.84 target set by the project owner, since this is not automatically checked in code.
+End of specification document. Built from the notebook's actual code — verify against your supervisor's requirements using Section 11 before finalizing.
+Hyperparameter | Default (CFG) | Optuna Search Range
+Input channels | 1 | —
+Number of classes | 3 | —
+Image / patch size | 128 (post ROI-extraction) | —
+Embedding dimension | 256 | 128, 256
+Number of attention heads | 8 | 4, 8
+Transformer (attention) depth | 4 | 2, 3, 4
+Dropout | 0.1 | 0.0 – 0.3 (continuous)
+Learning rate | 1 × 10⁻⁴ | 1e-5 – 1e-3 (log-uniform)
+Weight decay | 1 × 10⁻⁵ | 1e-6 – 1e-3 (log-uniform)
+Batch size | 8 | 4, 8
+Optimizer | AdamW | Adam, AdamW
+Gradient clip norm | 1.0 | —
+Epochs (max, per fold) | 50 | —
+Early-stopping patience | 10 (delta=1e-4) | —
+Cross-validation folds | 5 | —
+Random seed | 42 | —
+Metric | Source in code | Granularity
+Dice Score | compute_metrics() | Per class (Background/Pancreas/Tumor)
+IoU | compute_metrics() | Per class
+Precision | compute_metrics() + sklearn | Per class + macro
+Recall / Sensitivity | compute_metrics() + sklearn | Per class + macro
+F1 Score | compute_metrics() + sklearn | Per class + macro
+Specificity | compute_metrics() | Per class
+Pixel Accuracy | sklearn accuracy_score | Overall
+ROC-AUC | sklearn roc_auc_score | Per class (one-vs-rest)
+mAP (Average Precision) | sklearn average_precision_score | Per class
+MCC | sklearn matthews_corrcoef | Per class
+Hausdorff Distance (95th pct., approx.) | custom directed_hausdorff | Pancreas & Tumor only
+Confusion Matrix | sklearn confusion_matrix | Pixel-wise, 3×3

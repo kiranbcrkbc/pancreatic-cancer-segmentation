@@ -1,0 +1,175 @@
+--- PAGE 1 ---
+CNN + CBAM + Grad-CAM  Pancreatic Tumor Segmentation
+Page 1
+ CNN + CBAM + Grad-CAM
+ Explainable AI for Pancreatic Tumor Segmentation
+Dataset
+Medical Decathlon — Pancreas
+(Task07)
+Model
+CNN + CBAM
+Explainability
+Grad-CAM + Explainable AI
+1. Project Introduction
+The aim is to build a deep learning system for pancreatic tumor segmentation from CT images. The system uses CNN for
+feature learning, CBAM to focus on important features, and Grad-CAM as the explainability method. The final system is
+therefore CNN + CBAM + Grad-CAM + Explainable AI.
+2. Dataset & Target
+ Dataset
+Medical Decathlon — Pancreas (Task07)
+Input
+3D CT scans (.nii.gz)
+Original labels
+0 = Background · 1 = Pancreas · 2 = Tumor
+Target
+Binary tumor segmentation mask
+3. Preprocessing Pipeline — Required Steps
+Use all six preprocessing steps below before training the CNN + CBAM model.
+01
+ROI Patch Extraction
+Extract fixed-size 3D patches centered on the
+pancreas bounding box. This focuses the model on
+the relevant region and reduces memory use.
+02
+CLAHE Enhancement
+Use Contrast Limited Adaptive Histogram
+Equalization to improve local contrast and make
+pancreatic boundaries easier to see.
+03
+Targeted Zoom Augmentation
+Apply scale-aware zoom around the pancreas
+region using 0.7–1.4× magnification to simulate
+anatomical size variation.
+04
+Elastic Deformation
+Apply smooth spatial warping with random
+displacement fields to mimic natural organ
+deformation and improve generalization.
+05
+Multiscale Training
+Train using 32³, 64³ and 128³ patches so the model
+can learn both global context and fine local features.
+06
+Attention-Guided Augmentation
+Use saliency maps from a teacher model to identify
+important regions and concentrate augmentation in
+those regions.
+
+--- PAGE 2 ---
+CNN + CBAM + Grad-CAM  Pancreatic Tumor Segmentation
+Page 2
+4. Core Model
+CNN
+CBAM
+Segmentation
+Explainability
+Learns image features
+Channel + spatial attention
+Produces tumor mask
+Grad-CAM shows important
+regions
+Final system: CNN learns features → CBAM focuses on useful features → segmentation head predicts the tumor → Grad-CAM
+explains which regions influenced the prediction.
+5. Optional Attention / Context Block
+If an extra attention/context block is required, choose one: Multi-Scale Cross-Attention OR Swin Transformer Block.
+Option
+Purpose
+Multi-Scale Cross-Attention
+Combines information from different feature scales.
+Swin Transformer Block
+Uses window-based transformer attention to capture feature relationships.
+6. Fixed Training Setup
+ Setting
+Value
+Setting
+Value
+Cross-validation
+5-fold
+Epochs
+10 per fold
+Batch size
+8
+Optimizer
+Adam
+Loss
+BCE + Dice Loss
+Training unit
+3D patches / multiscale
+7. Bayesian Optimization Search Space
+ Hyperparameter
+Search range
+Hyperparameter
+Search range
+Learning rate
+1e-5 – 3e-4
+Attention heads
+4 – 12
+Embedding dimension
+128 – 512
+CBAM reduction ratio
+8 – 32
+Attention dropout
+0.1 – 0.4
+Batch size
+2 – 8
+Boundary loss weight
+0.1 – 0.4
+Requested final batch
+8
+
+--- PAGE 3 ---
+CNN + CBAM + Grad-CAM  Pancreatic Tumor Segmentation
+Page 3
+8. 5-Fold Cross-Validation
+ Step
+What to do
+1
+Split the data into 5 patient/volume-level folds.
+2
+Use 4 folds for training and 1 fold for validation.
+3
+Repeat until every fold has been used once for validation.
+4
+Train each fold for 10 epochs with batch size 8.
+5
+Save the metrics and checkpoint for every fold.
+6
+Report mean ± standard deviation across the 5 folds.
+Important: Keep all slices/patches from the same patient or 3D volume in the same fold. This prevents data leakage.
+9. Evaluation Metrics
+ Metric
+Simple meaning
+Dice
+Overlap between predicted tumor and true tumor.
+IoU
+Intersection over Union of prediction and ground truth.
+Precision
+How much of the predicted tumor is correct.
+Recall
+How much of the actual tumor was found.
+F1 Score
+Combines precision and recall.
+Accuracy
+Overall pixel-level correctness.
+10. Grad-CAM + Explainable AI
+Grad-CAM is the explainability method used with the model. Generate a Grad-CAM heatmap for predictions to show which
+regions of the CT input contributed most to the model's decision. Save the original image, prediction mask, and Grad-CAM
+visualization together for qualitative analysis.
+11. Final Handoff Checklist
+■ Medical Decathlon Pancreas Task07
+■ ROI patch extraction
+■ CLAHE enhancement
+■ Targeted zoom augmentation (0.7–1.4×)
+■ Elastic deformation
+■ Multiscale training (32³, 64³, 128³)
+■ Attention-guided augmentation
+■ CNN + CBAM segmentation model
+■ Optional: Multi-Scale Cross-Attention OR Swin Transformer
+■ 5-fold patient/volume-level cross-validation
+■ 10 epochs per fold
+■ Batch size = 8
+■ BCE + Dice loss and Adam optimizer
+■ Dice, IoU, precision, recall, F1 and accuracy
+■ Grad-CAM + Explainable AI outputs
+FINAL SYSTEM: CNN + CBAM + Grad-CAM + Explainable AI
+

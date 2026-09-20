@@ -1,0 +1,252 @@
+{
+  "fold_1": {
+    "overall_accuracy": 0.9061109754774306,
+    "background_dice": 0.9507164542833637,
+    "background_iou": 0.9060624825047137,
+    "background_precision": 0.9060624825047137,
+    "background_recall": 0.9999999999999812,
+    "background_specificity": 0.006798206278025687,
+    "background_f1": 0.9507164492954997,
+    "pancreas_dice": 0.013808719538221978,
+    "pancreas_iou": 0.006952361373276964,
+    "pancreas_precision": 0.9999999999731183,
+    "pancreas_recall": 0.006952361373276964,
+    "pancreas_specificity": 0.9999999999999813,
+    "pancreas_f1": 0.013808719401085625,
+    "tumor_dice": 0.0,
+    "tumor_iou": 0.0,
+    "tumor_precision": 0.0,
+    "tumor_recall": 0.0,
+    "tumor_specificity": 0.9999880867488737,
+    "tumor_f1": 0.0,
+    "mean_foreground_dice": 0.006904359769110989,
+    "mean_foreground_iou": 0.003476180686638482,
+    "mean_foreground_precision": 0.49999999998655914,
+    "mean_foreground_recall": 0.003476180686638482,
+    "mean_foreground_f1": 0.006904359700542813,
+    "mcc": 0.0777600425378816,
+    "background_roc_auc": 0.7508129148257465,
+    "background_map": 0.9594634243284039,
+    "pancreas_roc_auc": 0.2464588394077083,
+    "pancreas_map": 0.056160536380624126,
+    "tumor_roc_auc": 0.3215544117622165,
+    "tumor_map": 0.002521263597681813,
+    "confusion_matrix": [
+      [
+        534074,
+        0,
+        0
+      ],
+      [
+        53128,
+        372,
+        7
+      ],
+      [
+        2243,
+        0,
+        0
+      ]
+    ]
+  },
+  "fold_2": {
+    "overall_accuracy": 0.90350341796875,
+    "background_dice": 0.9497264750254103,
+    "background_iou": 0.9042658435557424,
+    "background_precision": 0.9042658435557424,
+    "background_recall": 0.9999999999999812,
+    "background_specificity": 0.009045879294595474,
+    "background_f1": 0.949726470038039,
+    "pancreas_dice": 0.0005938462680472491,
+    "pancreas_iou": 0.0002970113235566555,
+    "pancreas_precision": 0.999999999375,
+    "pancreas_recall": 0.0002970113235566555,
+    "pancreas_specificity": 0.9999999999999813,
+    "pancreas_f1": 0.0005938462621104395,
+    "tumor_dice": 0.0,
+    "tumor_iou": 0.0,
+    "tumor_precision": 0.0,
+    "tumor_recall": 0.0,
+    "tumor_specificity": 0.9991495700130376,
+    "tumor_f1": 0.0,
+    "mean_foreground_dice": 0.00029692313402362454,
+    "mean_foreground_iou": 0.00014850566177832775,
+    "mean_foreground_precision": 0.4999999996875,
+    "mean_foreground_recall": 0.00014850566177832775,
+    "mean_foreground_f1": 0.0002969231310552197,
+    "mcc": 0.046256395205111545,
+    "background_roc_auc": 0.7763910257620426,
+    "background_map": 0.9661512907447637,
+    "pancreas_roc_auc": 0.22586195738800588,
+    "pancreas_map": 0.05507589057766288,
+    "tumor_roc_auc": 0.25401486894906505,
+    "tumor_map": 0.003207791106449943,
+    "confusion_matrix": [
+      [
+        532892,
+        0,
+        0
+      ],
+      [
+        53355,
+        16,
+        499
+      ],
+      [
+        3062,
+        0,
+        0
+      ]
+    ]
+  },
+  "fold_3": {
+    "overall_accuracy": 0.9379673004150391,
+    "background_dice": 0.9806191041007247,
+    "background_iou": 0.9619751635973561,
+    "background_precision": 0.9671100043156562,
+    "background_recall": 0.9945109547328737,
+    "background_specificity": 0.7014432989689408,
+    "background_f1": 0.9806190991016902,
+    "pancreas_dice": 0.6295881887399191,
+    "pancreas_iou": 0.4594153257924846,
+    "pancreas_precision": 0.9985716140756618,
+    "pancreas_recall": 0.4597174341907699,
+    "pancreas_specificity": 0.9999303951656068,
+    "pancreas_f1": 0.6295881844225258,
+    "tumor_dice": 0.03407901948082603,
+    "tumor_iou": 0.017334887728715425,
+    "tumor_precision": 0.020231897775662425,
+    "tumor_recall": 0.10798863277515634,
+    "tumor_specificity": 0.9682185135505771,
+    "tumor_f1": 0.03407901682296504,
+    "mean_foreground_dice": 0.33183360411037255,
+    "mean_foreground_iou": 0.23837510676060003,
+    "mean_foreground_precision": 0.5094017559256621,
+    "mean_foreground_recall": 0.2838530334829631,
+    "mean_foreground_f1": 0.3318336006227454,
+    "mcc": 0.6385070922903763,
+    "background_roc_auc": 0.7207700426845188,
+    "background_map": 0.9487482554056015,
+    "pancreas_roc_auc": 0.27658428144364844,
+    "pancreas_map": 0.06198355736795207,
+    "tumor_roc_auc": 0.35859371801277296,
+    "tumor_map": 0.0042463441664303825,
+    "confusion_matrix": [
+      [
+        468353,
+        20,
+        2565
+      ],
+      [
+        13116,
+        23070,
+        13997
+      ],
+      [
+        2812,
+        13,
+        342
+      ]
+    ]
+  },
+  "fold_4": {
+    "overall_accuracy": 0.9030857086181641,
+    "background_dice": 0.949057926043701,
+    "background_iou": 0.9030544590064298,
+    "background_precision": 0.9030544590064298,
+    "background_recall": 0.9999999999999788,
+    "background_specificity": 0.0033150255001955053,
+    "background_f1": 0.9490579210566671,
+    "pancreas_dice": 0.006952872688374107,
+    "pancreas_iou": 0.0034885641152663928,
+    "pancreas_precision": 0.9999999999408283,
+    "pancreas_recall": 0.0034885641152663928,
+    "pancreas_specificity": 0.9999999999999789,
+    "pancreas_f1": 0.006952872619085664,
+    "tumor_dice": 0.0,
+    "tumor_iou": 0.0,
+    "tumor_precision": 0.0,
+    "tumor_recall": 0.0,
+    "tumor_specificity": 0.9999999999999808,
+    "tumor_f1": 0.0,
+    "mean_foreground_dice": 0.0034764363441870537,
+    "mean_foreground_iou": 0.0017442820576331964,
+    "mean_foreground_precision": 0.49999999997041417,
+    "mean_foreground_recall": 0.0017442820576331964,
+    "mean_foreground_f1": 0.003476436309542832,
+    "mcc": 0.05472169412417486,
+    "background_roc_auc": 0.7316347343841783,
+    "background_map": 0.9563880137757919,
+    "pancreas_roc_auc": 0.26803754297928883,
+    "pancreas_map": 0.058376463454605065,
+    "tumor_roc_auc": 0.3147775042349429,
+    "tumor_map": 0.0031915435054982065,
+    "confusion_matrix": [
+      [
+        473308,
+        0,
+        0
+      ],
+      [
+        48275,
+        169,
+        0
+      ],
+      [
+        2536,
+        0,
+        0
+      ]
+    ]
+  },
+  "fold_5": {
+    "overall_accuracy": 0.8989810943603516,
+    "background_dice": 0.9474715778025835,
+    "background_iou": 0.9001862161826465,
+    "background_precision": 0.9011776087983017,
+    "background_recall": 0.9987794024157448,
+    "background_specificity": 0.013419103611511527,
+    "background_f1": 0.9474715728157685,
+    "pancreas_dice": 0.0,
+    "pancreas_iou": 0.0,
+    "pancreas_precision": 0.0,
+    "pancreas_recall": 0.0,
+    "pancreas_specificity": 0.9999999999999789,
+    "pancreas_f1": 0.0,
+    "tumor_dice": 0.000499500499499252,
+    "tumor_iou": 0.00024981264051898624,
+    "tumor_precision": 0.0007818608287663655,
+    "tumor_recall": 0.0003669724770628735,
+    "tumor_specificity": 0.9975496728103604,
+    "tumor_f1": 0.0004994961516422355,
+    "mean_foreground_dice": 0.000249750249749626,
+    "mean_foreground_iou": 0.00012490632025949312,
+    "mean_foreground_precision": 0.00039093041438318277,
+    "mean_foreground_recall": 0.00018348623853143675,
+    "mean_foreground_f1": 0.00024974807582111777,
+    "mcc": 0.03661482946364078,
+    "background_roc_auc": 0.7637433801803851,
+    "background_map": 0.9591441368304813,
+    "pancreas_roc_auc": 0.24165286098888547,
+    "pancreas_map": 0.05884960309547334,
+    "tumor_roc_auc": 0.21480042653022802,
+    "tumor_map": 0.0031364174109747476,
+    "confusion_matrix": [
+      [
+        471324,
+        0,
+        576
+      ],
+      [
+        48961,
+        0,
+        702
+      ],
+      [
+        2724,
+        0,
+        1
+      ]
+    ]
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "best_mean_dice": 0.08745463205657553,
+  "best_params": {
+    "lr": 2.3102018878452926e-05,
+    "weight_decay": 3.549878832196506e-06,
+    "batch_size": 8,
+    "dropout": 0.15000000000000002,
+    "transformer_depth": 3,
+    "num_heads": 8,
+    "embed_dim": 256,
+    "optimizer": "AdamW"
+  },
+  "n_trials": 2
+}
