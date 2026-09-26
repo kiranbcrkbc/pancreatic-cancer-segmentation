@@ -1,0 +1,178 @@
+{
+  "Model 1 (CNN + Pyramid Transformer)": {
+    "Pixel Accuracy": 0.8867726045496324,
+    "Background Dice": 0.9395842450137553,
+    "Background IoU": 0.8860527020621681,
+    "Background Precision": 0.9094662904029993,
+    "Background Recall": 0.9717652982932939,
+    "Background F1": 0.9395792505242605,
+    "Pancreas Dice": 0.2068611839446596,
+    "Pancreas IoU": 0.11536261566135372,
+    "Pancreas Precision": 0.34423284255109915,
+    "Pancreas Recall": 0.14785661937186853,
+    "Pancreas F1": 0.2068569804058902,
+    "Tumor Dice": 2.0673971427178063e-09,
+    "Tumor IoU": 2.0673971427178063e-09,
+    "Tumor Precision": 1.5873013353489945e-07,
+    "Tumor Recall": 2.0946795096466708e-09,
+    "Tumor F1": 6.544522996837463e-11,
+    "Mean Foreground Dice": 0.10343059300602837,
+    "Mean Foreground IoU": 0.05768130886437543,
+    "Foreground Precision": 0.17211650064061634,
+    "Foreground Recall": 0.07392831073327402,
+    "Foreground F1": 0.10342849023566772,
+    "MCC": 0.1737017414020032,
+    "Pancreas HD95": 10.774952158115564,
+    "Tumor HD95": 50.0,
+    "Mean HD95": 30.387476079057784,
+    "Confusion Matrix": [
+      [
+        486318,
+        14106,
+        24
+      ],
+      [
+        44131,
+        7664,
+        39
+      ],
+      [
+        4280,
+        494,
+        0
+      ]
+    ]
+  },
+  "Model 2 (CNN + CBAM)": {
+    "Pixel Accuracy": 0.8983800551470589,
+    "Background Dice": 0.946470178836709,
+    "Background IoU": 0.8983800551488832,
+    "Background Precision": 0.8983800551488832,
+    "Background Recall": 1.0,
+    "Background F1": 0.9464651931906868,
+    "Pancreas Dice": 1.9292356364684887e-10,
+    "Pancreas IoU": 1.9292356364684887e-10,
+    "Pancreas Precision": 1.0,
+    "Pancreas Recall": 1.9292356364684887e-10,
+    "Pancreas F1": 3.858432687865716e-10,
+    "Tumor Dice": 2.0946795096466708e-09,
+    "Tumor IoU": 2.0946795096466708e-09,
+    "Tumor Precision": 1.0,
+    "Tumor Recall": 2.0946795096466708e-09,
+    "Tumor F1": 4.189317117346891e-09,
+    "Mean Foreground Dice": 1.1438015366467599e-09,
+    "Mean Foreground IoU": 1.1438015366467599e-09,
+    "Foreground Precision": 1.0,
+    "Foreground Recall": 1.1438015366467599e-09,
+    "Foreground F1": 2.2875801930667315e-09,
+    "MCC": 0.0,
+    "Pancreas HD95": 50.0,
+    "Tumor HD95": 0.0,
+    "Mean HD95": 25.0,
+    "Confusion Matrix": [
+      [
+        500448,
+        0,
+        0
+      ],
+      [
+        51834,
+        0,
+        0
+      ],
+      [
+        4774,
+        0,
+        0
+      ]
+    ]
+  },
+  "Model 3 (CNN + MHSA)": {
+    "Pixel Accuracy": 0.9030007755055147,
+    "Background Dice": 0.9487282750555295,
+    "Background IoU": 0.9024577114984893,
+    "Background Precision": 0.9041356037774383,
+    "Background Recall": 0.9979478387365331,
+    "Background F1": 0.948723287244935,
+    "Pancreas Dice": 0.12743293949900328,
+    "Pancreas IoU": 0.0680525372639039,
+    "Pancreas Precision": 0.7691157629877922,
+    "Pancreas Recall": 0.06947177546215384,
+    "Pancreas F1": 0.1274314200574779,
+    "Tumor Dice": 2.0946795096466708e-09,
+    "Tumor IoU": 2.0946795096466708e-09,
+    "Tumor Precision": 1.0,
+    "Tumor Recall": 2.0946795096466708e-09,
+    "Tumor F1": 4.189317117346891e-09,
+    "Mean Foreground Dice": 0.0637164707968414,
+    "Mean Foreground IoU": 0.034026269679291704,
+    "Foreground Precision": 0.8845578814938961,
+    "Foreground Recall": 0.03473588877841668,
+    "Foreground F1": 0.06371571212339751,
+    "MCC": 0.2055563259633412,
+    "Pancreas HD95": 18.28654563881755,
+    "Tumor HD95": 0.0,
+    "Mean HD95": 9.143272819408775,
+    "Confusion Matrix": [
+      [
+        499421,
+        1027,
+        0
+      ],
+      [
+        48233,
+        3601,
+        0
+      ],
+      [
+        4720,
+        54,
+        0
+      ]
+    ]
+  },
+  "Model 4 (Attention U-Net + GAT)": {
+    "Pixel Accuracy": 0.6477320053998161,
+    "Background Dice": 0.7635605161564915,
+    "Background IoU": 0.6175478267546619,
+    "Background Precision": 0.9994794882820371,
+    "Background Recall": 0.6177464991444117,
+    "Background F1": 0.7635557947673443,
+    "Pancreas Dice": 0.3927400139319703,
+    "Pancreas IoU": 0.2443537556867066,
+    "Pancreas Precision": 0.24453993482257855,
+    "Pancreas Recall": 0.9968939306252858,
+    "Pancreas F1": 0.3927368503805609,
+    "Tumor Dice": 2.4264777243457057e-10,
+    "Tumor IoU": 2.4264777243457057e-10,
+    "Tumor Precision": 2.744387726344918e-10,
+    "Tumor Recall": 2.0946795096466708e-09,
+    "Tumor F1": 1.1494502290248874e-13,
+    "Mean Foreground Dice": 0.19637000708730903,
+    "Mean Foreground IoU": 0.12217687796467717,
+    "Foreground Precision": 0.12226996754850866,
+    "Foreground Recall": 0.49844696635998265,
+    "Foreground F1": 0.19636842519033793,
+    "MCC": 0.35727576379194564,
+    "Pancreas HD95": 22.302432221839762,
+    "Tumor HD95": 50.0,
+    "Mean HD95": 36.15121611091988,
+    "Confusion Matrix": [
+      [
+        309150,
+        154860,
+        36438
+      ],
+      [
+        161,
+        51673,
+        0
+      ],
+      [
+        0,
+        4774,
+        0
+      ]
+    ]
+  }
+}
